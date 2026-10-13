@@ -1,4 +1,4 @@
-﻿# Tr0ll: 2 — VulnHub Walkthrough (Beginner Friendly)
+# Tr0ll: 2 — VulnHub Walkthrough (Beginner Friendly)
 
 | Field | Value |
 | --- | --- |
@@ -294,6 +294,7 @@ total 220
 > ```bash
 > md5sum images/*.jpg
 > ```
+>
 > ```text
 > 3f8a1c2b9d4e5f6071829a3b4c5d6e7f  images/cat_the_troll.jpg
 > 9c1e8d7f6a5b4c3d2e1f0a9b8c7d6e5f  images/keep-calm-and-let-me-troll-you.jpg
@@ -301,6 +302,10 @@ total 220
 > 3f8a1c2b9d4e5f6071829a3b4c5d6e7f  images/troll_2.jpg
 > 3f8a1c2b9d4e5f6071829a3b4c5d6e7f  images/troll_3.jpg
 > ```
+>
+> *(Filenames, byte sizes and digests above are representative — your copy of the OVA
+> may differ. The pattern is what matters: three identical hashes and one different.)*
+>
 > Three identical hashes confirm the duplicates; the odd one out is
 > `keep-calm-and-let-me-troll-you.jpg`. Different walkthroughs of this box name
 > different files depending on image revision — **the technique is what matters:

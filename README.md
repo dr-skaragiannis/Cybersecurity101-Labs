@@ -118,8 +118,8 @@ references resolve immediately. Every lab folder already ships an
 | --- | --- | --- |
 | Master catalog (all VMs indexed) | 708 | ✅ Done |
 | Lab setup / tools / beginner path docs | — | ✅ Done |
-| Full beginner walkthroughs | **82** written | 🚧 In progress |
-| Remaining machines | 626 | 🚧 Planned (metadata stubs in place) |
+| Full beginner walkthroughs | **94** written | 🚧 In progress |
+| Remaining machines | 614 | 🚧 Planned (metadata stubs in place) |
 
 See the live list of finished walkthroughs in
 [`docs/PROGRESS.md`](docs/PROGRESS.md).
@@ -148,6 +148,25 @@ guide:
 | zico2: 1 | LFI, phpLiteAdmin CVE-2012-4162, LFI→RCE chaining, Dirty COW | [`labs/zico2-1/`](labs/zico2-1/README.md) |
 | Bulldog: 1 | SHA-1 hashes in HTML comments, Django admin, web-shell filter bypass, `strings` on an ELF | [`labs/bulldog-1/`](labs/bulldog-1/README.md) |
 | Chill Hack: 1 | Anonymous FTP, command-injection filter bypass, SSH port forwarding, steganography, Docker→root | [`labs/chill-hack-1/`](labs/chill-hack-1/README.md) |
+
+A second batch followed, covering vulnerability classes the first batch did not —
+insecure deserialisation, Linux file capabilities, container escapes, mail-server
+administration interfaces and restricted shells:
+
+| Machine | Headline techniques | Walkthrough |
+| --- | --- | --- |
+| **CyberSploit: 1** | Base64 *and* binary decoding, `searchsploit` → Exploit-DB kernel matching | [`labs/cybersploit-1/`](labs/cybersploit-1/README.md) |
+| **Photographer: 1** | Anonymous SMB, Koken CVE-48706 upload bypass, SUID `php7.2` | [`labs/photographer-1/`](labs/photographer-1/README.md) |
+| **Empire: Breakout** | Brainfuck-encoded secret, Webmin vs Usermin, **`getcap` / `cap_dac_read_search`** | [`labs/empire-breakout/`](labs/empire-breakout/README.md) |
+| **W1R3S: 1.0.1** | Cuppa CMS LFI, world-writable `/etc/shadow`, `unshadow` + John | [`labs/w1r3s-101/`](labs/w1r3s-101/README.md) |
+| **billu: b0x** | Backslash SQLi bypass, `readfile` vs `include`, PHP hidden in a JPEG | [`labs/billu-b0x/`](labs/billu-b0x/README.md) |
+| **CengBox: 1** | `sqlmap` on a login form, `.ceng` upload filter, **`pspy`** | [`labs/cengbox-1/`](labs/cengbox-1/README.md) |
+| **Lampião: 1** | `cewl` wordlists, Hydra, Drupalgeddon2, Dirty COW | [`labs/lampiao-1/`](labs/lampiao-1/README.md) |
+| **HackInOS: 1** | Upload filter reading its own GitHub source, predictable `md5(name.rand(1,100))`, **Docker container escape** | [`labs/hackinos-1/`](labs/hackinos-1/README.md) |
+| **djinn: 1** | Automating a 1000-question TCP game, port knocking, Flask filter bypass, LXD escape | [`labs/djinn-1/`](labs/djinn-1/README.md) |
+| **SolidState: 1** | Apache James admin `root:root`, reading users' mail, CVE-2015-7611 | [`labs/solidstate-1/`](labs/solidstate-1/README.md) |
+| **Seppuku: 1** | Seven ports of rabbit holes, `rbash` escapes, a sudoers rule for a file that does not exist | [`labs/seppuku-1/`](labs/seppuku-1/README.md) |
+| **Temple of Doom: 1** | **Node.js insecure deserialisation** (CVE-2017-5941), shadowsocks injection, GTFOBins `tcpdump` | [`labs/temple-of-doom-1/`](labs/temple-of-doom-1/README.md) |
 
 ---
 

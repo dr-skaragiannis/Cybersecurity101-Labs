@@ -94,9 +94,26 @@ protocol-level abuse, or an OS that is not Linux.
 | 53 | serial: 2 | Serialisation and chaining | [stub](../labs/serial-2/README.md) |
 | 54 | dpwwn: 1 | WordPress + local privesc | [stub](../labs/dpwwn-1/README.md) |
 | 55 | Stapler: 1 | Twenty-plus services, wide enumeration | [read](../labs/stapler-1/README.md) |
+| 56 | **CyberSploit: 1** | *Complete-beginner* box: base64 + binary decoding, then Exploit-DB kernel matching | [read](../labs/cybersploit-1/README.md) |
+| 57 | **Photographer: 1** | Anonymous SMB, Koken file-upload bypass, SUID PHP | [read](../labs/photographer-1/README.md) |
+| 58 | **Empire: Breakout** | Brainfuck-encoded secret, Webmin/Usermin, Linux **file capabilities** (`getcap`) | [read](../labs/empire-breakout/README.md) |
+| 59 | **W1R3S: 1.0.1** | Cuppa CMS LFI reading a world-writable `/etc/shadow`, `unshadow` + John | [read](../labs/w1r3s-101/README.md) |
+| 60 | **billu: b0x** | Backslash SQLi bypass, `readfile` vs `include`, PHP hidden in a JPEG | [read](../labs/billu-b0x/README.md) |
+| 61 | **CengBox: 1** | `sqlmap` on a login form, `.ceng` upload filter, **`pspy`** to find a root-run script | [read](../labs/cengbox-1/README.md) |
+| 62 | **Lampião: 1** | `cewl` wordlists, Hydra, Drupalgeddon2, Dirty COW | [read](../labs/lampiao-1/README.md) |
+| 63 | **HackInOS: 1** | Upload filter reading its own GitHub source, predictable `md5(name.rand(1,100))`, **container escape** | [read](../labs/hackinos-1/README.md) |
+| 64 | **djinn: 1** | Automating a 1000-question TCP game, port knocking, Flask filter bypass, LXD escape | [read](../labs/djinn-1/README.md) |
+| 65 | **SolidState: 1** | Apache James admin `root:root`, reading other users' mail, CVE-2015-7611 | [read](../labs/solidstate-1/README.md) |
+| 66 | **Seppuku: 1** | Seven ports of rabbit holes, `rbash` escapes, a sudoers rule pointing at a file that does not exist | [read](../labs/seppuku-1/README.md) |
+| 67 | **Temple of Doom: 1** | **Node.js insecure deserialisation** (CVE-2017-5941), shadowsocks injection, GTFOBins `tcpdump` | [read](../labs/temple-of-doom-1/README.md) |
 
 See the full [catalog](CATALOG.md) to pick more — the *Writeup* column shows which
 machines already have a complete local guide.
+
+> **Where to start if you are brand new:** Tier 1 #11 **Basic Pentesting: 1**, then
+> Tier 4 #56 **CyberSploit: 1** — despite the tier number, CyberSploit is the gentlest
+> box in this repository and the author designed it for a first-time learner. The tiers
+> describe *skill breadth*, not strictly difficulty.
 
 ---
 

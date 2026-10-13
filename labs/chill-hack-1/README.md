@@ -934,8 +934,8 @@ $conn = new mysqli("localhost", "root", "sWf0sfv1sDF5", "webportal");
 > +----+----------+----------------------------------+
 > | id | username | password                         |
 > +----+----------+----------------------------------+
-> |  1 | Aurick   | 7ecfc9c4cef41ea4bd0f1b8b9a3a0de2 |
-> |  2 | cullapaar| 4d4a9d3d9d8e5c1a7b6f2e0d3c8b1a45 |
+> |  1 | Aurick   | 7e53614ced3640d5de23f111806cc4fd |
+> |  2 | cullapaar| 686216240e5af30df0501e53c789a649 |
 > +----+----------+----------------------------------+
 > ```
 > Both are unsalted MD5. Cracking them (CrackStation or `john --format=raw-md5`)

@@ -290,7 +290,8 @@ Team
 >   privilege escalation.** Something on this box legitimately runs as root and its
 >   credential must be *somewhere*.
 > - *"runs every minute"* → a cron job. Always enumerate cron once you have a shell.
-> - **A full team roster with email addresses.** Seven usernames.
+> - **A full team roster with email addresses.** A candidate username for every
+>   member of the team — and, as we are about to see, their password hashes too.
 
 ### 2.5 The HTML comments — leaked SHA-1 hashes
 
@@ -301,11 +302,11 @@ Right-click → **View Page Source** on `/dev/`, and scroll to the bottom:
   Backend team credentials for the dev panel.
   We'll remove these in prod.
 
-  alan@bulldogindustries.com  -  4f3f2a1b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f
-  grace@bulldogindustries.com -  7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b
+  alan@bulldogindustries.com  -  40 hex chars
+  grace@bulldogindustries.com -  40 hex chars
   nick@bulldogindustries.com  -  ddf45997a7e18a25ad5f5cf222da64814dd060d5
   sarah@bulldogindustries.com -  d8b8dd5e7f000b8dea26ef8428caf38c04466b3e
-  kevin@bulldogindustries.com -  1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b
+  kevin@bulldogindustries.com -  40 hex chars
   ...
 -->
 ```
@@ -348,12 +349,10 @@ d8b8dd5e7f000b8dea26ef8428caf38c04466b3e   sha1   bulldoglover
 **Option B — hashcat (the professional tool, offline, GPU-accelerated):**
 
 ```bash
+# every 40-hex string from the comment, one per line
 cat > hashes.txt <<'EOF'
-4f3f2a1b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f
-7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b
 ddf45997a7e18a25ad5f5cf222da64814dd060d5
 d8b8dd5e7f000b8dea26ef8428caf38c04466b3e
-1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b
 EOF
 hashcat -m 100 -a 0 hashes.txt /usr/share/wordlists/rockyou.txt
 ```
@@ -368,7 +367,7 @@ OpenCL API (OpenCL 3.0 PoCL 4.0+debian  Linux, None+Asserts, RELOC, SPIR, LLVM 1
 Minimum password length supported by kernel: 0
 Maximum password length supported by kernel: 256
 
-Hashes: 5 digests; 5 unique digests, 1 unique salts
+Hashes: 2 digests; 2 unique digests, 1 unique salts
 Bitmaps: 16 bits, 65536 entries, 0x0000ffff mask, 262144 bytes, 5/13 rotates
 Rules: 1
 
@@ -404,7 +403,7 @@ Hash.Target......: hashes.txt
 Time.Started.....: Fri May  3 17:18:02 2024 (4 secs)
 Time.Estimated...: Fri May  3 17:18:06 2024 (0 secs)
 Guess.Base.......: File (/usr/share/wordlists/rockyou.txt)
-Recovered........: 2/5 (40.00%) Digests
+Recovered........: 2/2 (100.00%) Digests
 Speed.#1.........:  3845.2 kH/s (0.31ms) @ Accel:256 Loops:1 Thr:1 Vec:8
 ```
 
@@ -412,8 +411,11 @@ Speed.#1.........:  3845.2 kH/s (0.31ms) @ Accel:256 Loops:1 Thr:1 Vec:8
 > - `-m 100` → **hash mode 100 = raw SHA-1.** Getting the mode wrong is the single
 >   most common hashcat error; `hashcat --example-hashes | grep -i sha1` lists them.
 > - `-a 0` → **attack mode 0 = straight dictionary.** (`-a 3` = mask/brute force.)
-> - `Recovered: 2/5` → two of the five hashes cracked. That is realistic: SHA-1 is
->   broken as a *password* hash, but only common passwords fall to a dictionary.
+> - `Recovered: 2/2` → both hashes fell to the dictionary in four seconds. On a real
+>   leak you would expect only the *common* passwords to fall this way — SHA-1 is
+>   broken as a password hash, but a genuinely strong passphrase still survives a
+>   straight dictionary attack. Run rules (`-a 0 -r rules/best64.rule`) and masks
+>   (`-a 3`) for the rest.
 >
 > **Speed: ~3.8 million SHA-1 guesses per second on a modest CPU.** That number is the
 > entire argument against unsalted SHA-1 for passwords. An attacker can try the whole

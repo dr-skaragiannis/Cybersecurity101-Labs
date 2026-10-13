@@ -327,11 +327,11 @@ echo 'THprM09ETTBOVEl4TUM5cGJtUmxlQzV3YUhBPSBDbG9zZXIh' | base64 -d ; echo
 ```
 
 ```text
-Tzk3ODM0NTIxMC9pbmRleC5waHA= Closer!
+Lzk3ODM0NTIxMC9pbmRleC5waHA= Closer!
 ```
 
 > **Two things happened.** The decode produced *another* base64 string
-> (`Tzk3ODM0NTIxMC9pbmRleC5waHA=`, note the trailing `=` padding) **plus the word
+> (`Lzk3ODM0NTIxMC9pbmRleC5waHA=`, note the trailing `=` padding) **plus the word
 > "Closer!"** — the author telling you you are on the right track but not finished.
 >
 > **Recognising base64 at a glance:** length is a multiple of 4, the alphabet is
@@ -341,7 +341,7 @@ Tzk3ODM0NTIxMC9pbmRleC5waHA= Closer!
 > **Decode again:**
 
 ```bash
-echo 'Tzk3ODM0NTIxMC9pbmRleC5waHA=' | base64 -d ; echo
+echo 'Lzk3ODM0NTIxMC9pbmRleC5waHA=' | base64 -d ; echo
 ```
 
 ```text

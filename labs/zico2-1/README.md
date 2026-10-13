@@ -473,22 +473,22 @@ Table: test_users
 | id | username | password                         |
 +----+----------+----------------------------------+
 | 1  | root     | 34kroot34                        |
-| 2  | zico     | 0d107d09f5bbe40cade3de5c71e9e9b7 |
+| 2  | zico     | 96781a607f4e9f5f423ac01f0dab0ebd |
 +----+----------+----------------------------------+
 ```
 
 > **Two rows.** `root`'s password is stored in **plaintext** (`34kroot34`) and
-> `zico`'s is an **unsalted MD5 hash** (`0d107d09f5bbe40cade3de5c71e9e9b7`).
+> `zico`'s is an **unsalted MD5 hash** (`96781a607f4e9f5f423ac01f0dab0ebd`).
 >
 > Identify and crack the MD5:
 > ```bash
 > echo -n 'zico' | md5sum          # sanity check the format
 > ```
 > ```text
-> fbade9e36a3f36d3d676c1b808451dd7  -
+> b0d0f0fcccf4f45e6c4474bb3d58d128  -
 > ```
 > ```bash
-> echo '0d107d09f5bbe40cade3de5c71e9e9b7' > zico.hash
+> echo '96781a607f4e9f5f423ac01f0dab0ebd' > zico.hash
 > john --format=raw-md5 --wordlist=/usr/share/wordlists/rockyou.txt zico.hash
 > ```
 > ```text

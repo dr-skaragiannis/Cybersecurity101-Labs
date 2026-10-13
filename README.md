@@ -143,6 +143,73 @@ references resolve immediately. Every lab folder already ships an
 
 ---
 
+## Difficulty scale
+
+Every lab folder is named **`<band>-<rank>-<slug>`**, so the file tree itself is a
+difficulty-ordered course:
+
+```text
+labs/2-001-basic-pentesting-1/     ← band 2 (Very Easy), rank 001
+labs/4-075-dc-9/                   ← band 4 (Medium),    rank 075
+labs/6-098-lord-of-the-root-101/   ← band 6 (Very Difficult), rank 098
+labs/8-099-21ltr-scene-1/          ← band 8 (Unrated),   rank 099
+```
+
+- **band** is the difficulty, `1`–`7` on the scale below. `8` means **Unrated** —
+  the writeup has not been written yet, so there are no commands to judge it from.
+  Unrated machines are grouped at the *end* of the numbering.
+- **rank** is a single global sequence `001`–`708` in ascending difficulty. It is the
+  same number shown in the `#` column of [`docs/CATALOG.md`](docs/CATALOG.md) and
+  [`docs/PROGRESS.md`](docs/PROGRESS.md), so any machine can be found by how hard it is.
+- **slug** is the original VulnHub identifier, unchanged, so old links and search
+  results still make sense.
+
+| Band | Label | Labs | What it means | Examples |
+| ---: | --- | ---: | --- | --- |
+| **1** | **Ultra Easy** | 0 | A single obvious flaw. One command finds it, one command exploits it. | — |
+| **2** | **Very Easy** | 13 | One or two steps, all with published tools and default or trivially guessed credentials. | [`basic-pentesting-1`](labs/2-001-basic-pentesting-1/README.md), [`cybersploit-1`](labs/2-002-cybersploit-1/README.md), [`dc-1`](labs/2-003-dc-1/README.md) … |
+| **3** | **Easy** | 56 | A normal recon → enumeration → foothold → privesc chain. Some enumeration effort; no custom code. | [`billu-b0x`](labs/3-014-billu-b0x/README.md), [`bluesky-1`](labs/3-015-bluesky-1/README.md), [`bossplayersctf-1`](labs/3-016-bossplayersctf-1/README.md) … |
+| **4** | **Medium** | 23 | Several bugs must be found and **chained**. Longer enumeration, less obvious privesc. | [`basic-pentesting-2`](labs/4-070-basic-pentesting-2/README.md), [`cherry-1`](labs/4-071-cherry-1/README.md), [`chill-hack-1`](labs/4-072-chill-hack-1/README.md) … |
+| **5** | **Difficult** | 5 | Multiple rabbit holes, obscure encodings, or a kernel/memory-corruption privesc. You must write a solver script. | [`djinn-1`](labs/5-093-djinn-1/README.md), [`ha-joker`](labs/5-094-ha-joker/README.md), [`ha-rudra`](labs/5-095-ha-rudra/README.md) … |
+| **6** | **Very Difficult** | 1 | Requires **writing an exploit yourself** (buffer overflow / shellcode) on top of a multi-stage chain. | [`lord-of-the-root-101`](labs/6-098-lord-of-the-root-101/README.md) |
+| **7** | **Ultra Difficult** | 0 | Several of the above at once, on an unfamiliar platform, with little to no guidance. | — |
+| **8** | **Unrated** | 610 | No writeup yet, so nothing to judge difficulty from. These are grouped at the end of the numbering and will be rated when written. | the 610 pending stubs, from `8-099-21ltr-scene-1` onward |
+
+### How the ratings were decided
+
+Difficulty is **derived from each writeup**, not guessed, and every rating is
+recorded in that lab's metadata table as `**N — Label** (stated: *…*)` so you can see
+the evidence:
+
+1. **The stated difficulty** — from the machine's author or its VulnHub page where one
+   exists (`Beginner`, `Easy`, `Easy/Intermediate`, `Intermediate`, `Intermediate to
+   Hard`, …). This is the strongest signal and sets the base band. Where the author's
+   wording is ambiguous, all the levels mentioned are averaged, so
+   *Easy / Intermediate* lands between the two rather than at either.
+2. **A technique adjustment** (capped at ±0.75 of a band), computed from the commands
+   the writeup actually runs — port knocking, steganography, deserialisation, obscure
+   encoding chains, kernel exploits, pivoting, container escapes push a machine up;
+   default credentials, anonymous FTP/SMB, a published Metasploit or Exploit-DB
+   exploit, and a `NOPASSWD` sudo rule push it down.
+3. **Two overrides.** Running a *published* kernel or overflow exploit is much easier
+   than writing one, so that bonus is cut by roughly two thirds when the writeup shows
+   `searchsploit`/`msfconsole`/Exploit-DB doing the work. And any machine that requires
+   **hand-written exploit development** is floored at band 5 — or band 6 when it also
+   carries seven or more other hard signals — because an understated author rating
+   should not hide the hardest work in the collection.
+
+Technique detection runs on each writeup **with all blockquote lines removed**. The
+📖 Concept boxes and *How to read it* notes are generic teaching text that mention hard
+techniques in every single lab; scoring them rated Kioptrix Level 1, the canonical
+beginner box, as "Very Difficult".
+
+> **Bands 1 and 7 are currently empty, and that is the honest result.** The 98
+> written walkthroughs were deliberately chosen as beginner-to-intermediate machines,
+> so none is a single-step Ultra Easy and only `lord-of-the-root-101` reaches Very Difficult. Both ends
+> of the scale will fill in as the 610 unrated machines get written.
+
+---
+
 ## Writeup progress
 
 | Batch | Machines | Status |
@@ -169,18 +236,18 @@ guide:
 
 | Machine | Headline techniques | Walkthrough |
 | --- | --- | --- |
-| Kioptrix: 2014 (#5) | FreeBSD, LFI via pChart, User-Agent access-control bypass, PhpTax RCE, SYSRET kernel exploit | [`labs/kioptrix-2014-5/`](labs/kioptrix-2014-5/README.md) |
-| Basic Pentesting: 1 | ProFTPD 1.3.3c backdoor, WordPress `admin:admin`, writable `/etc/passwd` | [`labs/basic-pentesting-1/`](labs/basic-pentesting-1/README.md) |
-| Basic Pentesting: 2 | SMB/`enum4linux`, Hydra, SSH-key cracking, Struts2 CVE-2017-9805 | [`labs/basic-pentesting-2/`](labs/basic-pentesting-2/README.md) |
-| Lord Of The Root: 1.0.1 | Port knocking, nested base64, SQLi, overlayfs, MySQL UDF, **hand-written buffer overflow** | [`labs/lord-of-the-root-101/`](labs/lord-of-the-root-101/README.md) |
-| FristiLeaks: 1.3 | Base64 image in HTML, file-upload filter bypass, insecure cron, SUID via `sudo -u` | [`labs/fristileaks-13/`](labs/fristileaks-13/README.md) |
-| HackLAB: Vulnix | `finger`/SMTP enumeration, NFS `root_squash`, UID impersonation, `sudoedit /etc/exports` | [`labs/hacklab-vulnix/`](labs/hacklab-vulnix/README.md) |
-| VulnOS: 2 | OpenDocMan SQLi (CVE-2014-1945), Drupalgeddon2, overlayfs | [`labs/vulnos-2/`](labs/vulnos-2/README.md) |
-| SickOs: 1.2 | WebDAV `PUT` upload, HTTP 417 gotcha, egress firewall, chkrootkit CVE-2014-0476 | [`labs/sickos-12/`](labs/sickos-12/README.md) |
-| Tr0ll: 2 | Image metadata forensics, ZIP cracking, Shellshock over SSH, manual 32-bit buffer overflow | [`labs/tr0ll-2/`](labs/tr0ll-2/README.md) |
-| zico2: 1 | LFI, phpLiteAdmin CVE-2012-4162, LFI→RCE chaining, Dirty COW | [`labs/zico2-1/`](labs/zico2-1/README.md) |
-| Bulldog: 1 | SHA-1 hashes in HTML comments, Django admin, web-shell filter bypass, `strings` on an ELF | [`labs/bulldog-1/`](labs/bulldog-1/README.md) |
-| Chill Hack: 1 | Anonymous FTP, command-injection filter bypass, SSH port forwarding, steganography, Docker→root | [`labs/chill-hack-1/`](labs/chill-hack-1/README.md) |
+| Kioptrix: 2014 (#5) | FreeBSD, LFI via pChart, User-Agent access-control bypass, PhpTax RCE, SYSRET kernel exploit | [`labs/3-050-kioptrix-2014-5/`](labs/3-050-kioptrix-2014-5/README.md) |
+| Basic Pentesting: 1 | ProFTPD 1.3.3c backdoor, WordPress `admin:admin`, writable `/etc/passwd` | [`labs/2-001-basic-pentesting-1/`](labs/2-001-basic-pentesting-1/README.md) |
+| Basic Pentesting: 2 | SMB/`enum4linux`, Hydra, SSH-key cracking, Struts2 CVE-2017-9805 | [`labs/4-070-basic-pentesting-2/`](labs/4-070-basic-pentesting-2/README.md) |
+| Lord Of The Root: 1.0.1 | Port knocking, nested base64, SQLi, overlayfs, MySQL UDF, **hand-written buffer overflow** | [`labs/6-098-lord-of-the-root-101/`](labs/6-098-lord-of-the-root-101/README.md) |
+| FristiLeaks: 1.3 | Base64 image in HTML, file-upload filter bypass, insecure cron, SUID via `sudo -u` | [`labs/3-031-fristileaks-13/`](labs/3-031-fristileaks-13/README.md) |
+| HackLAB: Vulnix | `finger`/SMTP enumeration, NFS `root_squash`, UID impersonation, `sudoedit /etc/exports` | [`labs/4-083-hacklab-vulnix/`](labs/4-083-hacklab-vulnix/README.md) |
+| VulnOS: 2 | OpenDocMan SQLi (CVE-2014-1945), Drupalgeddon2, overlayfs | [`labs/3-067-vulnos-2/`](labs/3-067-vulnos-2/README.md) |
+| SickOs: 1.2 | WebDAV `PUT` upload, HTTP 417 gotcha, egress firewall, chkrootkit CVE-2014-0476 | [`labs/4-086-sickos-12/`](labs/4-086-sickos-12/README.md) |
+| Tr0ll: 2 | Image metadata forensics, ZIP cracking, Shellshock over SSH, manual 32-bit buffer overflow | [`labs/5-097-tr0ll-2/`](labs/5-097-tr0ll-2/README.md) |
+| zico2: 1 | LFI, phpLiteAdmin CVE-2012-4162, LFI→RCE chaining, Dirty COW | [`labs/4-092-zico2-1/`](labs/4-092-zico2-1/README.md) |
+| Bulldog: 1 | SHA-1 hashes in HTML comments, Django admin, web-shell filter bypass, `strings` on an ELF | [`labs/3-017-bulldog-1/`](labs/3-017-bulldog-1/README.md) |
+| Chill Hack: 1 | Anonymous FTP, command-injection filter bypass, SSH port forwarding, steganography, Docker→root | [`labs/4-072-chill-hack-1/`](labs/4-072-chill-hack-1/README.md) |
 
 A second batch followed, covering vulnerability classes the first batch did not —
 insecure deserialisation, Linux file capabilities, container escapes, mail-server
@@ -188,18 +255,18 @@ administration interfaces and restricted shells:
 
 | Machine | Headline techniques | Walkthrough |
 | --- | --- | --- |
-| **CyberSploit: 1** | Base64 *and* binary decoding, `searchsploit` → Exploit-DB kernel matching | [`labs/cybersploit-1/`](labs/cybersploit-1/README.md) |
-| **Photographer: 1** | Anonymous SMB, Koken CVE-48706 upload bypass, SUID `php7.2` | [`labs/photographer-1/`](labs/photographer-1/README.md) |
-| **Empire: Breakout** | Brainfuck-encoded secret, Webmin vs Usermin, **`getcap` / `cap_dac_read_search`** | [`labs/empire-breakout/`](labs/empire-breakout/README.md) |
-| **W1R3S: 1.0.1** | Cuppa CMS LFI, world-writable `/etc/shadow`, `unshadow` + John | [`labs/w1r3s-101/`](labs/w1r3s-101/README.md) |
-| **billu: b0x** | Backslash SQLi bypass, `readfile` vs `include`, PHP hidden in a JPEG | [`labs/billu-b0x/`](labs/billu-b0x/README.md) |
-| **CengBox: 1** | `sqlmap` on a login form, `.ceng` upload filter, **`pspy`** | [`labs/cengbox-1/`](labs/cengbox-1/README.md) |
-| **Lampião: 1** | `cewl` wordlists, Hydra, Drupalgeddon2, Dirty COW | [`labs/lampiao-1/`](labs/lampiao-1/README.md) |
-| **HackInOS: 1** | Upload filter reading its own GitHub source, predictable `md5(name.rand(1,100))`, **Docker container escape** | [`labs/hackinos-1/`](labs/hackinos-1/README.md) |
-| **djinn: 1** | Automating a 1000-question TCP game, port knocking, Flask filter bypass, LXD escape | [`labs/djinn-1/`](labs/djinn-1/README.md) |
-| **SolidState: 1** | Apache James admin `root:root`, reading users' mail, CVE-2015-7611 | [`labs/solidstate-1/`](labs/solidstate-1/README.md) |
-| **Seppuku: 1** | Seven ports of rabbit holes, `rbash` escapes, a sudoers rule for a file that does not exist | [`labs/seppuku-1/`](labs/seppuku-1/README.md) |
-| **Temple of Doom: 1** | **Node.js insecure deserialisation** (CVE-2017-5941), shadowsocks injection, GTFOBins `tcpdump` | [`labs/temple-of-doom-1/`](labs/temple-of-doom-1/README.md) |
+| **CyberSploit: 1** | Base64 *and* binary decoding, `searchsploit` → Exploit-DB kernel matching | [`labs/2-002-cybersploit-1/`](labs/2-002-cybersploit-1/README.md) |
+| **Photographer: 1** | Anonymous SMB, Koken CVE-48706 upload bypass, SUID `php7.2` | [`labs/3-055-photographer-1/`](labs/3-055-photographer-1/README.md) |
+| **Empire: Breakout** | Brainfuck-encoded secret, Webmin vs Usermin, **`getcap` / `cap_dac_read_search`** | [`labs/3-028-empire-breakout/`](labs/3-028-empire-breakout/README.md) |
+| **W1R3S: 1.0.1** | Cuppa CMS LFI, world-writable `/etc/shadow`, `unshadow` + John | [`labs/3-068-w1r3s-101/`](labs/3-068-w1r3s-101/README.md) |
+| **billu: b0x** | Backslash SQLi bypass, `readfile` vs `include`, PHP hidden in a JPEG | [`labs/3-014-billu-b0x/`](labs/3-014-billu-b0x/README.md) |
+| **CengBox: 1** | `sqlmap` on a login form, `.ceng` upload filter, **`pspy`** | [`labs/3-018-cengbox-1/`](labs/3-018-cengbox-1/README.md) |
+| **Lampião: 1** | `cewl` wordlists, Hydra, Drupalgeddon2, Dirty COW | [`labs/3-051-lampiao-1/`](labs/3-051-lampiao-1/README.md) |
+| **HackInOS: 1** | Upload filter reading its own GitHub source, predictable `md5(name.rand(1,100))`, **Docker container escape** | [`labs/3-040-hackinos-1/`](labs/3-040-hackinos-1/README.md) |
+| **djinn: 1** | Automating a 1000-question TCP game, port knocking, Flask filter bypass, LXD escape | [`labs/5-093-djinn-1/`](labs/5-093-djinn-1/README.md) |
+| **SolidState: 1** | Apache James admin `root:root`, reading users' mail, CVE-2015-7611 | [`labs/4-087-solidstate-1/`](labs/4-087-solidstate-1/README.md) |
+| **Seppuku: 1** | Seven ports of rabbit holes, `rbash` escapes, a sudoers rule for a file that does not exist | [`labs/5-096-seppuku-1/`](labs/5-096-seppuku-1/README.md) |
+| **Temple of Doom: 1** | **Node.js insecure deserialisation** (CVE-2017-5941), shadowsocks injection, GTFOBins `tcpdump` | [`labs/4-091-temple-of-doom-1/`](labs/4-091-temple-of-doom-1/README.md) |
 
 Work now proceeds **series by series**, so that whole machine families complete
 together rather than as scattered one-offs. The **HA series** (17 boot2root VMs by
@@ -207,10 +274,10 @@ Hacking Articles) is underway — these four are done:
 
 | Machine | Headline techniques | Walkthrough |
 | --- | --- | --- |
-| **HA: Wordy** | Five independent routes into one WordPress box: Reflex Gallery upload, Mail Masta **LFI**, WP Support Plus **CSRF auth bypass**, Gwolle **RFI**, WP Symposium **SQLi**, then SUID `cp`/`wget` → `/etc/passwd` overwrite | [`labs/ha-wordy/`](labs/ha-wordy/README.md) |
-| **HA: Joker** | HTTP Basic Auth brute-forced via a **base64 Burp Intruder payload**, Joomla template editing, and the **`lxd` group → privileged container** escape | [`labs/ha-joker/`](labs/ha-joker/README.md) |
-| **HA: Rudra** | **NFS `no_root_squash`** export + LFI = RCE, MySQL on loopback with an empty root password, **Cloakify emoji-cipher** decoding, `sudo watch` | [`labs/ha-rudra/`](labs/ha-rudra/README.md) |
-| **HA: Narak** | Why `nmap` without `-sU` **lies to you**, unauthenticated **TFTP**, `cewl` wordlists, WebDAV `PUT`, **Brainfuck** decoding, and **MOTD injection** (`/etc/update-motd.d/00-header` mode `777` → root) | [`labs/ha-narak/`](labs/ha-narak/README.md) |
+| **HA: Wordy** | Five independent routes into one WordPress box: Reflex Gallery upload, Mail Masta **LFI**, WP Support Plus **CSRF auth bypass**, Gwolle **RFI**, WP Symposium **SQLi**, then SUID `cp`/`wget` → `/etc/passwd` overwrite | [`labs/3-039-ha-wordy/`](labs/3-039-ha-wordy/README.md) |
+| **HA: Joker** | HTTP Basic Auth brute-forced via a **base64 Burp Intruder payload**, Joomla template editing, and the **`lxd` group → privileged container** escape | [`labs/5-094-ha-joker/`](labs/5-094-ha-joker/README.md) |
+| **HA: Rudra** | **NFS `no_root_squash`** export + LFI = RCE, MySQL on loopback with an empty root password, **Cloakify emoji-cipher** decoding, `sudo watch` | [`labs/5-095-ha-rudra/`](labs/5-095-ha-rudra/README.md) |
+| **HA: Narak** | Why `nmap` without `-sU` **lies to you**, unauthenticated **TFTP**, `cewl` wordlists, WebDAV `PUT`, **Brainfuck** decoding, and **MOTD injection** (`/etc/update-motd.d/00-header` mode `777` → root) | [`labs/4-082-ha-narak/`](labs/4-082-ha-narak/README.md) |
 
 ---
 

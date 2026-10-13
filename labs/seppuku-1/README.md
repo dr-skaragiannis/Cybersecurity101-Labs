@@ -28,6 +28,23 @@ Target (seppuku)  : 192.168.56.104
 
 ---
 
+> ### 📖 How to read this walkthrough
+>
+> Boxes marked **📖 Concept** stop and explain the *idea* behind what you are about to
+> do — not just the command, but what it is and why it works. They are the point of
+> this document; the commands are only the demonstration.
+>
+> Each box links to [`docs/CONCEPTS.md`](../../docs/CONCEPTS.md), the repository-wide
+> primer on fundamentals (networking, how nmap works, wordlists, shells, privilege
+> escalation). Read the box here for the idea, follow the link when you want the full
+> treatment.
+>
+> **Brand new to this?** Start with
+> [CONCEPTS §2 — Networking you must know first](../../docs/CONCEPTS.md#2-networking-you-must-know-first),
+> then [§5 — What is nmap, and how does it work?](../../docs/CONCEPTS.md#5-what-is-nmap-and-how-does-it-work).
+
+---
+
 ## 0. What you will learn
 
 1. **Enumerating a wide attack surface** — seven ports, four of them HTTP(S), and how
@@ -62,6 +79,44 @@ with the private key from `/keys/` → create `~/.cgi_bin/bin` containing `/bin/
 
 ## 1. Reconnaissance
 
+
+> ### 📖 Concept — What is nmap, and how does a port scan work?
+>
+> **`nmap`** ("Network MAPper") discovers hosts and the services they run. It has no
+> magic: it **sends deliberately crafted packets and classifies the responses**.
+> Understand that and every flag becomes predictable.
+>
+> A **port** (0–65535) identifies *which program* on a host receives a packet; the IP
+> address gets you to the machine, the port gets you to the service. TCP is
+> connection-oriented, so a scan is really a conversation — the **three-way
+> handshake**: `SYN` → `SYN-ACK` → `ACK`. The target has only three possible
+> replies, and they map directly onto the words in the output:
+>
+> | Target's reply | nmap reports | Meaning |
+> | --- | --- | --- |
+> | **SYN-ACK** | `open` | A program is listening |
+> | **RST** | `closed` | Host up, nothing listening there |
+> | *(nothing)* / ICMP unreachable | `filtered` | A firewall dropped it |
+>
+> **Read the line everyone skips:** `Not shown: 65532 closed tcp ports
+> (conn-refused)`. `65535 − 65532 = 3` interesting ports, and `(conn-refused)` is
+> the *reason* — the target sent RSTs, so it is up and answering, not firewalled.
+> Add `--reason` to any scan to see this evidence column explicitly; it is the best
+> learning flag in nmap.
+>
+> **Key flags:** `-p-` scans **all** 65535 ports (the interesting service is often on
+> `:8080`, `:666`, `:31337` — skipping this is how beginners get stuck); `-sV`
+> fingerprints versions by reading banners and probing against ~10,000 known
+> signatures; `-sC` runs the safe default NSE scripts; `-T4` is the right speed for
+> labs (**`-T5` misses ports** because it abandons slow replies — a false negative is
+> worse than slow); `-oA name` writes text, XML and greppable output at once; `sudo`
+> enables the faster stealthier SYN scan instead of a full connect.
+>
+> **`-sV` is the pivot into everything else.** `Apache 2.4.29` implies Ubuntu 18.04;
+> `OpenSSH 7.6p1` confirms it. Without versions you cannot use `searchsploit`.
+>
+> **Deep dive:** [CONCEPTS §5 — What is nmap, and how does it work?](../../docs/CONCEPTS.md#5-what-is-nmap-and-how-does-it-work)
+
 ```bash
 ip a | grep -w inet
 sudo nmap -sn 192.168.56.0/24
@@ -79,6 +134,27 @@ Nmap done: 256 IP addresses (3 hosts up) scanned in 2.28 seconds
 
 ---
 
+
+> ### 📖 Concept — What is enumeration, and how is it different from scanning?
+>
+> **Enumeration** is interrogating the services you found to extract *specific,
+> actionable detail*: usernames, directory paths, share names, versions, database
+> tables.
+>
+> | | **Scanning** | **Enumeration** |
+> | --- | --- | --- |
+> | Question | *"Is something there?"* | *"What exactly is there, and what can I ask it for?"* |
+> | Output | Ports, versions | **Usernames, paths, shares, credentials, data** |
+> | Example | `nmap -p- -sV` → "port 80 open" | `wpscan -e u` → "users: michael, steven" |
+>
+> **Enumeration produces the nouns that exploitation needs.** You cannot brute force
+> a login without a username. You cannot crack a hash you never found. You cannot
+> exploit an upload path you do not know. Every successful foothold traces back to an
+> enumerated fact — which is why so many VulnHub authors write "ENUMERATION IS THE
+> KEY" in capitals. They are telling you which phase you are skipping.
+>
+> **Deep dive:** [CONCEPTS §6 — What is enumeration?](../../docs/CONCEPTS.md#6-what-is-enumeration)
+
 ## 2. Enumeration
 
 ### 2.1 Full port scan
@@ -86,6 +162,36 @@ Nmap done: 256 IP addresses (3 hosts up) scanned in 2.28 seconds
 ```bash
 sudo nmap -p- -A -T4 -oN scans/seppuku.txt 192.168.56.104
 ```
+
+
+> ### 📖 Concept — FTP, and why "anonymous" is the first thing to try
+>
+> **FTP** (port 21) predates modern authentication. It sends usernames, passwords and
+> file contents in **cleartext**, and it has a built-in convention for public access:
+> the account **`anonymous`**, traditionally with an email address (or nothing) as the
+> password.
+>
+> ```bash
+> ftp target                     # then: anonymous / (blank)
+> curl -s ftp://anonymous:@target/
+> wget -r ftp://anonymous:@target/          # mirror the whole tree
+> nmap -p21 --script ftp-anon,ftp-vuln-cve2010-4221 target
+> ```
+>
+> Inside an FTP session: `ls`, `cd`, `binary` (**switch mode before downloading
+> anything non-text** — ASCII mode corrupts binaries), `get`, `mget`, `put`, `recurse`.
+>
+> **Two things to check immediately.** First, is anonymous access *enabled*? Second, is
+> it **writable** — does `put shell.php` succeed? A writable FTP root that overlaps
+> the web document root is a web-shell upload with no exploitation required. Also look
+> for `backup.zip`, `creds.txt`, `id_rsa`, `web.config` and any `notes.txt` — authors
+> leave the next step in a file named something obvious.
+>
+> ProFTPD 1.3.3c specifically ships a **compile-time backdoor** (`telnet target 6200`
+> gives root); check the exact version against Exploit-DB before assuming you need
+> credentials.
+>
+> **Deep dive:** [CONCEPTS §9.5 — FTP](../../docs/CONCEPTS.md#95-ftp--port-21)
 
 ```text
 Starting Nmap 7.94 ( https://nmap.org ) at 2024-05-04 11:05 EDT
@@ -174,6 +280,32 @@ Nothing interesting here, move along.
 ```
 
 **SMB:**
+
+
+> ### 📖 Concept — SMB enumeration
+>
+> **SMB** (Server Message Block, ports 139/445) is Windows file and printer sharing,
+> also present on most Linux servers via Samba. It is one of the richest enumeration
+> targets there is: shares, users, groups, password policy, and often files.
+>
+> ```bash
+> smbclient -L //target/ -N            # list shares with a NULL session (no credentials)
+> smbclient //target/share -N          # connect; then: ls, cd, get, prompt, recurse
+> smbmap -H target                     # shares AND your permission on each (R/W!)
+> enum4linux -a target                 # users, groups, shares, policy — one shot
+> crackmapexec smb target --shares     # modern, fast, scriptable
+> rpcclient -U '' -N target            # then: enumdomusers, enumdomgroups, queryuser
+> ```
+>
+> **Always try anonymous/NULL access first** — it is the most common finding. `-N`
+> means "no password". If it works, `smbmap` will show `READ` or `WRITE` per share; a
+> **writable** share you can reach over HTTP is a web-shell upload waiting to happen.
+>
+> Then hunt inside every share for `backup.zip`, `web.config`, `.kdbx`, `id_rsa`,
+> `*.sql`, `site.txt`, `passwords.xls` — authors and real admins alike leave them
+> there.
+>
+> **Deep dive:** [CONCEPTS §9.3 — SMB](../../docs/CONCEPTS.md#93-smb--ports-139445)
 
 ```bash
 smbclient -L //192.168.56.104 -N
@@ -299,6 +431,44 @@ curl -s http://192.168.56.104:7601/ | head -20
 
 Directory brute force:
 
+
+> ### 📖 Concept — What is content discovery, and what is a wordlist?
+>
+> **Content discovery** means *guessing URL paths and keeping the ones that exist*.
+> There is no cleverness — it is a dictionary attack against the URL space. A web
+> server will serve anything it has but does not advertise an index, so the tool
+> requests `/admin`, `/backup`, `/config.php` … one at a time and classifies each
+> response.
+>
+> A **wordlist** is a plain text file, one candidate per line. Its power comes from an
+> empirical fact: **web directory names are not random.** `/admin`, `/phpmyadmin`,
+> `/wp-content` appear on thousands of sites, so a curated list of a few thousand
+> words beats a random generator of millions. Common sources on Kali:
+>
+> | List | Size | Notes |
+> | --- | --- | --- |
+> | `dirb/common.txt` | 4,612 | Hand-curated; fast first pass |
+> | `dirb/big.txt` | 204,669 | Second pass; finds what `common` misses |
+> | `directory-list-2.3-medium.txt` | 220,547 | Crawled from real sites |
+> | **SecLists** | huge | The professional standard — `apt install seclists` |
+>
+> **The status codes are the whole result:** `200` exists and is readable · `201`
+> means a `PUT` succeeded, **you can write files here** · `301` is usually a
+> *directory* needing a trailing `/` · `403` means **it exists** but you may not read
+> it — itself an information leak · `404` is the baseline · `500` means **your input
+> broke something**, often injection.
+>
+> > **`401` vs `403` matters most.** `401` = "I don't know who you are"
+> > (*authenticate*). `403` = "I know who you are and you may not" (*authorise*).
+>
+> **The extension flag (`-x` / `-X`) is the difference between finding nothing and
+> finding everything.** `/secret` 404s; `/secret.txt` 200s. **If a scan comes back
+> empty, change the extension list before you change the wordlist.** Try
+> `php,txt,html,bak,old,zip,conf,log,inc`.
+>
+> **Deep dive:** [CONCEPTS §7 — What is a wordlist?](../../docs/CONCEPTS.md#7-what-is-a-wordlist) ·
+> [§8 — Content discovery](../../docs/CONCEPTS.md#8-content-discovery--finding-hidden-urls)
+
 ```bash
 gobuster dir -u http://192.168.56.104:7601/ \
   -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt \
@@ -416,6 +586,50 @@ dragon
 curl -s http://192.168.56.104:7601/secret/passwd.bak | grep -v nologin | grep -v /bin/false
 ```
 
+
+> ### 📖 Concept — Escaping a restricted shell
+>
+> **`rbash`** (restricted bash) is bash started with `--restricted`. It blocks:
+> changing directory (`cd`), setting or unsetting `SHELL`/`PATH`/`ENV`/`BASH_ENV`,
+> command names containing `/`, output redirection with `>`, and `exec`/`source` of
+> absolute paths.
+>
+> It is a *shell* restriction, not a security boundary — it only constrains that one
+> process. **Anything that spawns a fresh shell escapes it.** Work through these:
+>
+> ```bash
+> # 1. Does any permitted command spawn a shell?
+> vim -c ':!sh'            # or :set shell=/bin/bash  then :shell
+> less /etc/passwd         # then type !sh
+> more, man (then !sh), ftp (!/bin/sh), gdb (-ex '!sh'), awk ('BEGIN{system("/bin/sh")}')
+> find . -exec /bin/sh \; -quit
+>
+> # 2. Can you run an interpreter at all?
+> python -c 'import os; os.system("/bin/sh")'
+> perl -e 'exec "/bin/sh";'
+> php -r "system('/bin/sh');"
+>
+> # 3. Is SSH available with a command override?
+> ssh user@target -t "/bin/sh"          # -t forces a tty, bypassing the login shell
+> ssh user@target -t "bash --noprofile --norc"
+>
+> # 4. Is the restriction only in the profile?
+> bash --noprofile --norc               # a clean, unrestricted bash
+> export SHELL=/bin/bash                # if you can reach env at all
+>
+> # 5. Can you write a file and execute it another way?
+> echo '/bin/sh' > /tmp/x.sh            # redirection is often blocked — try tee
+> ```
+>
+> **Check what you actually have first.** `echo $0` shows the shell; `set -o` lists
+> options (look for `restricted on`); `echo $PATH` shows whether it is pinned;
+> `compgen -c | head -50` lists runnable commands.
+>
+> **The general principle:** a restricted shell limits *one process*. Find any child
+> process it lets you create, and the restriction does not apply there.
+>
+> **Deep dive:** [CONCEPTS §12 — Shells](../../docs/CONCEPTS.md#12-shells--bind-reverse-and-ttys)
+
 ```text
 root:x:0:0:root:/root:/bin/bash
 seppuku:x:1000:1000:seppuku,,,:/home/seppuku:/bin/rbash
@@ -438,6 +652,54 @@ cat shadow.bak | grep -v ':\*:' | grep -v ':!:'
 ```text
 quyen:$6$k3J9mN2p$Lx8vR4tY1wE5aS3dF6gH0jK2lZ7xC0vBnMq49xQ2mK7pL4vR8tY1wE5aS3dF:18394:0:99999:7:::
 ```
+
+
+> ### 📖 Concept — How password cracking actually works
+>
+> A password hash is a **one-way** function. You cannot invert it — there is no
+> "un-hash". You can only **guess and compare**: hash a candidate, see if it matches
+> the target. Cracking speed is therefore measured in guesses per second, and the
+> defence is to make each guess expensive.
+>
+> | Algorithm | GPU speed | Verdict |
+> | --- | --- | --- |
+> | MD5, SHA-1, SHA-256 | **Billions/sec** | Unusable for passwords |
+> | MD5-crypt (`$1$`) | ~100k/sec | Obsolete |
+> | bcrypt (`$2b$`) | ~20k/sec | Acceptable |
+> | SHA-512-crypt (`$6$`) | ~10k/sec | Acceptable |
+> | **phpass (`$P$`)** | ~5k/sec | WordPress/Drupal — 8192 MD5 rounds, deliberately slow |
+> | yescrypt (`$y$`) | ~3k/sec | Modern Ubuntu default |
+>
+> ```bash
+> john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
+> john --show hash.txt                       # results without re-cracking
+> john --format=phpass --wordlist=rockyou.txt hash.txt    # force the format
+> unshadow /etc/passwd /etc/shadow > combined.txt         # prepare Linux hashes
+> hashcat -m 400 -a 0 hash.txt rockyou.txt                # -m = mode, -a 0 = wordlist
+> ```
+>
+> **Reading John's output:** `Loaded 1 password hash (phpass, …)` means it
+> auto-detected the format correctly — if it says `No password hashes loaded`, pass
+> `--format=` explicitly (`john --list=formats` lists them all). `1g 0:00:00:14 DONE`
+> means one guess succeeded in 14 seconds, and `3842p/s` is the candidate rate — **that
+> low number is the algorithm's defence working.**
+>
+> > ⚠️ **Always single-quote a hash on the command line.** In double quotes or bare,
+> > the shell expands `$P`, `$1`, `$6` as variables and silently truncates it. This is
+> > one of the most common reasons a crack "finds nothing".
+>
+> **If the wordlist fails, add rules before giving up** — automatic mangling that
+> capitalises, appends digits and applies leetspeak:
+>
+> ```bash
+> john --wordlist=rockyou.txt --rules hash.txt
+> hashcat -m 0 -a 0 hash.txt rockyou.txt -r /usr/share/hashcat/rules/best64.rule
+> ```
+>
+> `best64.rule` applies 64 transformations per word. A list that fails outright very
+> often succeeds with rules, at 64× the cost.
+>
+> **Deep dive:** [CONCEPTS §14 — Password cracking](../../docs/CONCEPTS.md#14-password-cracking)
 
 ```bash
 john --format=sha512crypt --wordlist=/usr/share/wordlists/rockyou.txt shadow.bak
@@ -471,6 +733,37 @@ Session completed
 > ```
 
 **And the Jack picture:**
+
+
+> ### 📖 Concept — Steganography and file carving
+>
+> CTF authors hide data in files constantly. Know the layers, cheapest first:
+>
+> | Layer | Tool | What it finds |
+> | --- | --- | --- |
+> | **Metadata** | `exiftool img.jpg` | Comments, GPS, software version, **author**, dates |
+> | **Trailing data** | `binwalk img.jpg`, `strings`, `xxd` | A ZIP or text appended *after* the image's end-of-file marker |
+> | **Embedded files** | `binwalk -e`, `foremost`, `scalpel` | Carves out files hidden inside another |
+> | **LSB steganography** | `zsteg`, `stegsolve` | Payload in the least-significant bits of pixel data |
+> | **Password-protected** | `steghide extract -sf img.jpg` | Data hidden with a passphrase (try the box's other creds) |
+>
+> ```bash
+> exiftool image.jpg
+> binwalk image.jpg
+> strings -n 6 image.jpg | head -50
+> zsteg -a image.png
+> steghide extract -sf image.jpg
+> ```
+>
+> **Start with `exiftool` and `binwalk`.** They are instant and they account for most
+> CTF "steganography" — which is usually just *a file appended to another file* or *a
+> comment in the metadata*, not real LSB embedding. `binwalk` reporting a `Zip archive
+> data` at a non-zero offset means exactly that: two files concatenated.
+>
+> If a ZIP is recovered and password-protected: `zip2john file.zip > zip.hash` then
+> `john --wordlist=rockyou.txt zip.hash`, or `fcrackzip -D -u -p dict.txt file.zip`.
+>
+> **Deep dive:** [CONCEPTS §10 — Encoding vs hashing vs encryption](../../docs/CONCEPTS.md#10-encoding-vs-hashing-vs-encryption)
 
 ```bash
 wget -q http://192.168.56.104:7601/secret/jack.jpg
@@ -546,6 +839,44 @@ Hydra (https://github.com/vanhauser-thc/thc-hydra) finished at 2024-05-04 11:32:
 ```bash
 ssh seppuku@192.168.56.104
 ```
+
+
+> ### 📖 Concept — PATH hijacking
+>
+> When a program runs another program **by name only** (`service`, `tar`, `python`)
+> rather than by absolute path, the shell searches each directory in `$PATH` **left to
+> right** and executes the first match it finds. If you can place a file earlier in
+> that search order, you control what runs.
+>
+> This matters when the calling program is **root-owned** — a cron job, a SUID binary,
+> or a startup script:
+>
+> ```bash
+> mkdir -p /tmp/evil
+> printf '#!/bin/sh\ncp /bin/bash /tmp/rootbash && chmod +s /tmp/rootbash\n' > /tmp/evil/service
+> chmod +x /tmp/evil/service
+> export PATH=/tmp/evil:$PATH
+> # wait for the root job to run, then:
+> /tmp/rootbash -p
+> ```
+>
+> **Find the opportunity** by inspecting what the privileged program actually calls:
+>
+> ```bash
+> strace -f -e trace=execve /usr/local/bin/script.sh 2>&1 | grep execve
+> strings /usr/local/bin/script.sh | grep -E 'system\(|popen\(|exec'
+> ```
+>
+> An `execve("service", ...)` with **no leading `/`** is the vulnerability. A fully
+> qualified `/usr/sbin/service` is not.
+>
+> **Check cron's own PATH first** — `/etc/crontab` usually sets
+> `PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin`, and
+> `sudo`'s `secure_path` overrides yours entirely. If `/tmp` cannot get into that
+> list, look instead for a writable directory that is *already* in it —
+> `/usr/local/bin` very often is.
+>
+> **Deep dive:** [CONCEPTS §15.8 — PATH hijacking](../../docs/CONCEPTS.md#158-path-hijacking)
 
 ```text
 seppuku@192.168.56.104's password:
@@ -684,6 +1015,92 @@ tanto:x:1002:1002:,,,:/home/tanto:/bin/rbash
 
 > The live `/etc/passwd` matches `passwd.bak` exactly — and confirms **there is no
 > `quyen`**. The shadow.bak hash really was a decoy.
+
+
+> ### 📖 Concept — What is sudo, and how do you read `sudo -l`?
+>
+> **`sudo`** ("superuser do") runs a command **as another user** — by default root. It
+> exists so administrators can grant *specific* elevated abilities without handing out
+> the root password. Its rules live in `/etc/sudoers`, edited only via `visudo`.
+>
+> `sudo -l` (**l**ist) shows what *you* are permitted. **It is the first command to
+> run as any new user on any box** — it costs nothing, and a surprising fraction of
+> machines are solved by one line of its output.
+>
+> **Parse the tokens precisely:**
+>
+> | Token | Meaning |
+> | --- | --- |
+> | `(ALL)` | may run as **any** user, including root |
+> | `(root)` | only as root |
+> | `(ALL:ALL)` | any user **and** any group |
+> | `(user)` | only as that specific user — try `sudo -u user …` |
+> | **`NOPASSWD:`** | **no password will be requested** |
+> | `/usr/bin/foo` | only this binary, at this **absolute path** |
+> | `/usr/bin/foo *` | with **any** arguments ← the dangerous case |
+> | `/usr/bin/foo -m *` | only with these arguments |
+> | `ALL` alone | full root, no restriction |
+>
+> **The rule that matters:** *any program that can execute another program, granted
+> without argument restrictions, is a root shell in disguise.* `python`, `perl`,
+> `ruby`, `lua`, `node`, `php`, `bash`, `find`, `vim`, `nano`, `less`, `more`, `man`,
+> `awk`, `env`, `gdb`, `tar`, `zip`, `make`, `git`, `watch`, `nmap`, `ftp`.
+>
+> **Do not invent the payload — look it up on [GTFOBins](https://gtfobins.github.io/).**
+> It documents exactly which binaries can be abused when SUID, sudo-able or run by a
+> scheduler, organised by capability (shell, file read, file write, reverse shell).
+> It is maintained, tested, and explains *why* each line works. The Windows equivalent
+> is **LOLBAS**.
+>
+> ```bash
+> sudo watch -x sh -c 'reset; exec sh'          # GTFOBins: watch
+> sudo find . -exec /bin/sh \; -quit            # GTFOBins: find
+> sudo vim -c ':!sh'                            # GTFOBins: vim
+> sudo -u#-1 /bin/bash                           # CVE-2019-14287 (sudo < 1.8.28)
+> ```
+>
+> **Deep dive:** [CONCEPTS §15.2 — sudo rights](../../docs/CONCEPTS.md#152-sudo-rights)
+> ### 📖 Concept — What is SUID?
+>
+> **SUID** (*set-user-ID*) is a file permission bit that makes a program run with the
+> privileges of the **file's owner** rather than the caller. It exists for a good
+> reason: `/usr/bin/passwd` is SUID-root so ordinary users can change their own
+> password, which requires writing `/etc/shadow` — a file they cannot otherwise touch.
+>
+> **When a *powerful* binary carries the SUID bit, that power becomes yours.** In a
+> listing you read it as an **`s`** where the owner's execute bit would be:
+>
+> ```text
+> -rwxr-xr-x  →  -rwsr-xr-x        (SUID set)
+>       ^            ^
+> ```
+>
+> ```bash
+> find / -perm -u=s -type f 2>/dev/null      # the human-readable form
+> find / -perm -4000 -type f 2>/dev/null     # octal equivalent
+> find / -perm /6000 -type f 2>/dev/null     # SUID *or* SGID
+> ```
+>
+> `-perm -u=s` means "the user-SUID bit is set" (the leading `-` makes it a *subset*
+> match, so it also catches SGID files). `-type f` restricts to regular files.
+> `2>/dev/null` discards the thousands of `Permission denied` errors that would
+> otherwise bury the answer.
+>
+> **Compare against the stock baseline** so the odd entries jump out. Normal on
+> Debian/Ubuntu: `mount`, `umount`, `su`, `ping`, `passwd`, `chfn`, `chsh`, `newgrp`,
+> `gpasswd`, `ssh-keysign`, `pppd`, `dmcrypt-get-device`, `traceroute6.iputils`.
+>
+> **Never normal, and an instant root if found:** `cp`, `mv`, `wget`, `curl`, `tar`,
+> `find`, `vim`, `nano`, `less`, `more`, `man`, `python`, `perl`, `php`, `ruby`,
+> `awk`, `sed`, `env`, `bash`, `sh`, `gdb`, `nmap`, `tcpdump`, `dd`, `make`, `git`,
+> `tail`, `head`, `cat`, `rsync`, `apt`.
+>
+> Look each one up on **[GTFOBins](https://gtfobins.github.io/)** → its **SUID**
+> section. Note that spawning a shell from a SUID binary usually needs **`-p`**
+> (*privileged*) — without it, `bash` deliberately drops its effective UID back to
+> yours as a safety measure, and you end up exactly where you started.
+>
+> **Deep dive:** [CONCEPTS §15.3 — SUID binaries](../../docs/CONCEPTS.md#153-suid-binaries)
 
 ```bash
 seppuku@seppuku:/home$ sudo -l
@@ -1046,6 +1463,8 @@ them.
 ---
 
 ## 9. References
+
+- **Repository primer** — the fundamentals behind every command in this document: [`docs/CONCEPTS.md`](../../docs/CONCEPTS.md)
 
 - VulnHub entry: <https://vulnhub.com/entry/seppuku-1,484/>
 - Series: <https://vulnhub.com/series/seppuku,318/>

@@ -22,6 +22,23 @@
 
 ---
 
+> ### 📖 How to read this walkthrough
+>
+> Boxes marked **📖 Concept** stop and explain the *idea* behind what you are about to
+> do — not just the command, but what it is and why it works. They are the point of
+> this document; the commands are only the demonstration.
+>
+> Each box links to [`docs/CONCEPTS.md`](../../docs/CONCEPTS.md), the repository-wide
+> primer on fundamentals (networking, how nmap works, wordlists, shells, privilege
+> escalation). Read the box here for the idea, follow the link when you want the full
+> treatment.
+>
+> **Brand new to this?** Start with
+> [CONCEPTS §2 — Networking you must know first](../../docs/CONCEPTS.md#2-networking-you-must-know-first),
+> then [§5 — What is nmap, and how does it work?](../../docs/CONCEPTS.md#5-what-is-nmap-and-how-does-it-work).
+
+---
+
 ## 0. What you will learn
 
 - How to find a target on an isolated lab subnet with `arp-scan` / `netdiscover`.
@@ -60,6 +77,30 @@ ip a
 
 Now sweep the subnet for live hosts. ARP-based discovery is fast and does not need TCP.
 
+
+> ### 📖 Concept — What is reconnaissance?
+>
+> **Reconnaissance** ("recon") is the phase where you work out *what exists*
+> before you try to break into anything. It is deliberately broad and shallow: you
+> are drawing a map, not attacking a position. The term comes straight from the
+> military — send scouts to look at the terrain before committing troops.
+>
+> On a lab box, recon almost always means one thing: **find the target's IP.** The
+> tools above do it with **ARP** — the layer-2 protocol that answers *"which
+> hardware address owns this IP?"* ARP cannot be blocked by a host firewall the way
+> TCP can, which is why it is the most reliable way to enumerate a local subnet. A
+> machine that refuses to answer `ping` will still answer ARP.
+>
+> **Read the output carefully.** One entry is your gateway (usually `.1`), one is
+> **you** (match the MAC from `ip a`), and the rest are candidates. The first three
+> octets of a MAC identify the vendor: `08:00:27` is VirtualBox, `00:0c:29` and
+> `00:50:56` are VMware, `00:15:5d` is Hyper-V. **Always confirm the target's MAC
+> against your hypervisor's settings** — attacking the wrong host is the classic
+> beginner error.
+>
+> **Deep dive:** [CONCEPTS §3 — What is reconnaissance?](../../docs/CONCEPTS.md#3-what-is-reconnaissance) ·
+> [§4 — Host discovery](../../docs/CONCEPTS.md#4-host-discovery--who-is-out-there)
+
 ```bash
 sudo arp-scan --interface=eth0 --localnet
 ```
@@ -79,7 +120,66 @@ sudo arp-scan --interface=eth0 --localnet
 
 ---
 
+
+> ### 📖 Concept — What is enumeration, and how is it different from scanning?
+>
+> **Enumeration** is interrogating the services you found to extract *specific,
+> actionable detail*: usernames, directory paths, share names, versions, database
+> tables.
+>
+> | | **Scanning** | **Enumeration** |
+> | --- | --- | --- |
+> | Question | *"Is something there?"* | *"What exactly is there, and what can I ask it for?"* |
+> | Output | Ports, versions | **Usernames, paths, shares, credentials, data** |
+> | Example | `nmap -p- -sV` → "port 80 open" | `wpscan -e u` → "users: michael, steven" |
+>
+> **Enumeration produces the nouns that exploitation needs.** You cannot brute force
+> a login without a username. You cannot crack a hash you never found. You cannot
+> exploit an upload path you do not know. Every successful foothold traces back to an
+> enumerated fact — which is why so many VulnHub authors write "ENUMERATION IS THE
+> KEY" in capitals. They are telling you which phase you are skipping.
+>
+> **Deep dive:** [CONCEPTS §6 — What is enumeration?](../../docs/CONCEPTS.md#6-what-is-enumeration)
+
 ## 2. Enumeration — open ports and services
+
+
+> ### 📖 Concept — What is nmap, and how does a port scan work?
+>
+> **`nmap`** ("Network MAPper") discovers hosts and the services they run. It has no
+> magic: it **sends deliberately crafted packets and classifies the responses**.
+> Understand that and every flag becomes predictable.
+>
+> A **port** (0–65535) identifies *which program* on a host receives a packet; the IP
+> address gets you to the machine, the port gets you to the service. TCP is
+> connection-oriented, so a scan is really a conversation — the **three-way
+> handshake**: `SYN` → `SYN-ACK` → `ACK`. The target has only three possible
+> replies, and they map directly onto the words in the output:
+>
+> | Target's reply | nmap reports | Meaning |
+> | --- | --- | --- |
+> | **SYN-ACK** | `open` | A program is listening |
+> | **RST** | `closed` | Host up, nothing listening there |
+> | *(nothing)* / ICMP unreachable | `filtered` | A firewall dropped it |
+>
+> **Read the line everyone skips:** `Not shown: 65532 closed tcp ports
+> (conn-refused)`. `65535 − 65532 = 3` interesting ports, and `(conn-refused)` is
+> the *reason* — the target sent RSTs, so it is up and answering, not firewalled.
+> Add `--reason` to any scan to see this evidence column explicitly; it is the best
+> learning flag in nmap.
+>
+> **Key flags:** `-p-` scans **all** 65535 ports (the interesting service is often on
+> `:8080`, `:666`, `:31337` — skipping this is how beginners get stuck); `-sV`
+> fingerprints versions by reading banners and probing against ~10,000 known
+> signatures; `-sC` runs the safe default NSE scripts; `-T4` is the right speed for
+> labs (**`-T5` misses ports** because it abandons slow replies — a false negative is
+> worse than slow); `-oA name` writes text, XML and greppable output at once; `sudo`
+> enables the faster stealthier SYN scan instead of a full connect.
+>
+> **`-sV` is the pivot into everything else.** `Apache 2.4.29` implies Ubuntu 18.04;
+> `OpenSSH 7.6p1` confirms it. Without versions you cannot use `searchsploit`.
+>
+> **Deep dive:** [CONCEPTS §5 — What is nmap, and how does it work?](../../docs/CONCEPTS.md#5-what-is-nmap-and-how-does-it-work)
 
 ```bash
 # 1) Fast full-TCP sweep of all 65,535 ports
@@ -132,6 +232,37 @@ http://deathnote.vuln/wordpress/
 ### 2.2 WordPress fingerprinting with WPScan
 
 The footer, `/wp-login.php`, and `/wp-content/` paths are dead giveaways for WordPress.
+
+
+> ### 📖 Concept — How does WordPress leak usernames?
+>
+> WordPress builds author archive URLs from a **numeric user ID**:
+>
+> ```text
+> /wordpress/?author=1   →  301 → /wordpress/author/michael/
+> /wordpress/?author=2   →  301 → /wordpress/author/steven/
+> ```
+>
+> The ID counts up from 1 and the redirect target contains the **username**.
+> `wpscan -e u` just loops the IDs until they stop resolving. Watch it happen by hand
+> in a browser — that is worth more than reading about it.
+>
+> **The `-e` flag chooses what to enumerate:** `u` users · `p` **plugins** (the most
+> common WordPress compromise vector) · `t` themes · `vp`/`vt` only *vulnerable*
+> plugins/themes · `cb` config backups (`wp-config.php.bak` — a jackpot) · `dbe`
+> database exports.
+>
+> wpscan also labels *how* it found things, and the labels matter: **Passive
+> Detection** means inferred from data the site publishes anyway (RSS, bylines) — the
+> site does not notice. **Aggressive Detection** means it actively probed (brute
+> forcing author IDs, submitting bad logins to read error messages) — which writes
+> log entries.
+>
+> **Why usernames matter:** they are half of every credential pair. With two known
+> usernames you can attack `wp-login.php` *and* SSH directly instead of guessing both
+> halves.
+>
+> **Deep dive:** [CONCEPTS §9.2 — WordPress / wpscan](../../docs/CONCEPTS.md#92-wordpress--wpscan)
 
 ```bash
 wpscan --url http://deathnote.vuln/wordpress/ -e u
@@ -217,6 +348,46 @@ cat notes.txt
 We now have a small username list *and* a small password list. Hydra will try every
 combination against the SSH service.
 
+
+> ### 📖 Concept — What is Hydra doing?
+>
+> **Hydra** is a network login brute-forcer. It speaks the login protocol of ~50
+> services (SSH, FTP, HTTP, MySQL, SMB, RDP, VNC, SNMP…) and tries credential
+> combinations until one is accepted. There is no exploit and no cleverness — it is a
+> very fast, very patient guesser.
+>
+> | Flag | Meaning |
+> | --- | --- |
+> | `-l USER` / `-L file` | single **l**ogin name / a *file* of them |
+> | `-p PASS` / `-P file` | single **p**assword / a *file* of them |
+> | `-C file` | a file of colon-separated `user:pass` **pairs** (credential stuffing) |
+> | **`-e nsr`** | also try **n**ull password, **s**ame-as-username, and **r**eversed username |
+> | `-f` | stop at the first success |
+> | `-t N` | threads — higher is faster, noisier, and can destabilise a lab VM |
+> | `-I` | ignore a stale `hydra.restore` file |
+> | `ssh://` | the **service module** — picking the wrong one is the most common Hydra mistake |
+>
+> **`-e nsr` should be on every run.** The three cheapest guesses in existence are
+> empty, the username, and the reversed username — and they succeed astonishingly
+> often, usually in under a second, before the wordlist is even consulted.
+>
+> **A wordlist attack is not a brute force.** Different attacks, different costs:
+>
+> | Attack | Tries | Notes |
+> | --- | --- | --- |
+> | **Wordlist** | curated list, many passwords → **one** account | Fast, high hit rate |
+> | **Brute force** | every character combination | Astronomically slow |
+> | **Password spraying** | **one** password → **many** accounts | Stays under per-account lockout thresholds |
+> | **Credential stuffing** | real leaked `user:pass` pairs | Exploits reuse |
+>
+> > ⚠️ Pointing Hydra at all 14 million lines of `rockyou.txt` over SSH would take
+> > days and generate millions of failed logins in `auth.log`. Fine on a VM you own;
+> > on a real system it is an obvious, logged event. Professionals throttle with
+> > `-t 4`, use a short targeted list, and spray rather than hammer.
+>
+> **Deep dive:** [CONCEPTS §7 — What is a wordlist?](../../docs/CONCEPTS.md#7-what-is-a-wordlist) ·
+> [§7.4 — Recognising the shape of the tool call](../../docs/CONCEPTS.md#74-recognising-the-shape-of-the-tool-call)
+
 ```bash
 hydra -L user.txt -P notes.txt ssh://192.168.56.101
 ```
@@ -258,6 +429,45 @@ l@deathnote:~$ find / -name "user.txt" 2>/dev/null
 
 ---
 
+
+> ### 📖 Concept — What is privilege escalation, and in what order do you try things?
+>
+> You have a shell as a low-privileged user — often `www-data`, the account Apache
+> runs as, which has no usable password and no home directory. **Privilege
+> escalation** is becoming an administrator: `root` on Linux, `SYSTEM` on Windows.
+>
+> Why bother? An ordinary user can read their own files and almost nothing else. Root
+> reads every file, loads kernel modules, changes any password, and installs a
+> backdoor that survives a reboot. On a CTF the root flag can only be read by root; in
+> a real engagement root is the difference between "we found a weak password" and "the
+> entire estate is compromised."
+>
+> **The discipline is a checklist, worked from cheapest to most destructive:**
+>
+> | Order | Check | Command |
+> | --- | --- | --- |
+> | 1 | **What may I already run as root?** | `sudo -l` ← *the single highest-value command* |
+> | 2 | What binaries run as their owner regardless of caller? | `find / -perm -u=s -type f 2>/dev/null` |
+> | 3 | What extra privileges are attached to binaries? | `getcap -r / 2>/dev/null` |
+> | 4 | What runs on a schedule, as root? | `cat /etc/crontab`; `./pspy64 -pf` |
+> | 5 | What root-owned file can I write to? | `find / -writable -type f 2>/dev/null` |
+> | 6 | Can I read a credential that gets reused? | `wp-config.php`, `.env`, `~/.bash_history` |
+> | 7 | Am I in a privileged group? | `id` → `docker`, `lxd`, `disk`, `sudo` |
+> | 8 | Is the kernel old enough to exploit? | `uname -a` + `searchsploit` |
+>
+> **Work it in order.** Steps 1–7 take minutes and are safe. Step 8 (kernel exploits)
+> can panic the VM and cost you a re-import, so it is a last resort, not a first
+> instinct.
+>
+> **Also orient yourself first** — it is one line and it tells you which OS you are
+> on, which decides everything else:
+>
+> ```bash
+> id; whoami; hostname; uname -a; cat /etc/os-release
+> ```
+>
+> **Deep dive:** [CONCEPTS §15 — Linux privilege escalation](../../docs/CONCEPTS.md#15-linux-privilege-escalation)
+
 ## 4. Privilege escalation — becoming root
 
 ### 4.1 Find the password for the next user
@@ -284,6 +494,40 @@ cat /opt/L/fake-notebook-rule/case.wav
 > chain "From Hex" → "From Base64".
 
 Decode it — the result is a password:
+
+
+> ### 📖 Concept — Encoding is not encryption
+>
+> These three get conflated constantly, and the confusion costs hours:
+>
+> | | **Encoding** | **Hashing** | **Encryption** |
+> | --- | --- | --- | --- |
+> | Purpose | Represent data in another *format* | Prove integrity / store passwords | Provide *confidentiality* |
+> | Reversible? | **Yes — trivially, with no key** | **No** (only guessable) | Yes, **with the key** |
+> | Key needed? | No | No | **Yes** |
+> | Examples | base64, hex, URL-encoding, ROT13, binary | MD5, SHA-256, bcrypt, phpass | AES, RSA, ChaCha20 |
+> | Security value | **Zero** | Depends on the algorithm | Depends on the key |
+>
+> **Recognise base64 on sight.** Three reliable tells: the character set is only
+> `A–Z a–z 0–9 + /` with optional `=` padding; **the length is a multiple of 4**; and
+> it is not a fixed-length digest with a `$1$`/`$6$`/`$P$` prefix.
+>
+> ```bash
+> echo 'YWFydGk6YWFydGlAZ21haWwuY29t' | base64 -d; echo
+> # aarti:aarti@gmail.com
+> ```
+>
+> > **Base64 is not a secret.** It exists so binary data survives text-only transport
+> > — email attachments, HTTP headers, JSON. Seeing it "protecting" a password is a
+> > *finding*, not a defence. **Always check whether it is nested:** decode, then test
+> > whether the result is itself base64 or hex. Some boxes chain two or three layers.
+>
+> **Identify hashes by prefix:** 32 hex = MD5 · 40 hex = SHA-1 · 64 hex = SHA-256 ·
+> `$1$` = MD5-crypt · `$2b$` = bcrypt · `$6$` = SHA-512-crypt · `$y$` = yescrypt ·
+> **`$P$`/`$H$` = phpass (WordPress, Drupal)** · `$apr1$` = Apache `.htpasswd` ·
+> `pbkdf2_sha256$` = Django.
+>
+> **Deep dive:** [CONCEPTS §10 — Encoding vs hashing vs encryption](../../docs/CONCEPTS.md#10-encoding-vs-hashing-vs-encryption)
 
 ```bash
 cat /opt/L/fake-notebook-rule/case.wav | xxd -r -p | base64 -d
@@ -317,6 +561,51 @@ uid=1000(kira) gid=1000(kira) groups=1000(kira),27(sudo)
 ### 4.3 Abuse over-broad sudo to become root
 
 Always check what your current user may run as root:
+
+
+> ### 📖 Concept — What is sudo, and how do you read `sudo -l`?
+>
+> **`sudo`** ("superuser do") runs a command **as another user** — by default root. It
+> exists so administrators can grant *specific* elevated abilities without handing out
+> the root password. Its rules live in `/etc/sudoers`, edited only via `visudo`.
+>
+> `sudo -l` (**l**ist) shows what *you* are permitted. **It is the first command to
+> run as any new user on any box** — it costs nothing, and a surprising fraction of
+> machines are solved by one line of its output.
+>
+> **Parse the tokens precisely:**
+>
+> | Token | Meaning |
+> | --- | --- |
+> | `(ALL)` | may run as **any** user, including root |
+> | `(root)` | only as root |
+> | `(ALL:ALL)` | any user **and** any group |
+> | `(user)` | only as that specific user — try `sudo -u user …` |
+> | **`NOPASSWD:`** | **no password will be requested** |
+> | `/usr/bin/foo` | only this binary, at this **absolute path** |
+> | `/usr/bin/foo *` | with **any** arguments ← the dangerous case |
+> | `/usr/bin/foo -m *` | only with these arguments |
+> | `ALL` alone | full root, no restriction |
+>
+> **The rule that matters:** *any program that can execute another program, granted
+> without argument restrictions, is a root shell in disguise.* `python`, `perl`,
+> `ruby`, `lua`, `node`, `php`, `bash`, `find`, `vim`, `nano`, `less`, `more`, `man`,
+> `awk`, `env`, `gdb`, `tar`, `zip`, `make`, `git`, `watch`, `nmap`, `ftp`.
+>
+> **Do not invent the payload — look it up on [GTFOBins](https://gtfobins.github.io/).**
+> It documents exactly which binaries can be abused when SUID, sudo-able or run by a
+> scheduler, organised by capability (shell, file read, file write, reverse shell).
+> It is maintained, tested, and explains *why* each line works. The Windows equivalent
+> is **LOLBAS**.
+>
+> ```bash
+> sudo watch -x sh -c 'reset; exec sh'          # GTFOBins: watch
+> sudo find . -exec /bin/sh \; -quit            # GTFOBins: find
+> sudo vim -c ':!sh'                            # GTFOBins: vim
+> sudo -u#-1 /bin/bash                           # CVE-2019-14287 (sudo < 1.8.28)
+> ```
+>
+> **Deep dive:** [CONCEPTS §15.2 — sudo rights](../../docs/CONCEPTS.md#152-sudo-rights)
 
 ```bash
 sudo -l
@@ -384,6 +673,8 @@ cat /root/root.txt
 ---
 
 ## 7. References
+
+- **Repository primer** — the fundamentals behind every command in this document: [`docs/CONCEPTS.md`](../../docs/CONCEPTS.md)
 
 - VulnHub entry: [Deathnote: 1](https://vulnhub.com/entry/deathnote-1,739/)
 - Community writeups consulted:

@@ -8,6 +8,18 @@ output** — starting from the absolute basics. The goal is that a student who h
 never opened a terminal can follow along, understand the methodology, and reproduce
 the result in their own lab.
 
+Writeups do not just list commands. Each one is broken up by **📖 Concept boxes**
+that stop and explain the underlying idea at the point it first comes up — what
+reconnaissance actually is, what a port scan does at the packet level, where a
+wordlist comes from and why it beats guessing, what a reverse shell is and why we
+never use a bind shell, how `sudo -l` is meant to be read. Every box links to
+[`docs/CONCEPTS.md`](docs/CONCEPTS.md) for the full treatment.
+
+> **New to this? Read [`docs/CONCEPTS.md`](docs/CONCEPTS.md) first.** It is the
+> repository-wide fundamentals primer: networking, how nmap works, enumeration,
+> wordlists, encoding vs hashing vs encryption, shells, and Linux privilege
+> escalation. Every command in every walkthrough is explained against it.
+
 > This repository indexes **all 708 VulnHub virtual machines** in
 > [`docs/CATALOG.md`](docs/CATALOG.md). Full walkthroughs are being added
 > machine-by-machine into [`labs/`](labs/).
@@ -35,6 +47,7 @@ Cybersecurity101-Labs/
 ├── README.md               ← you are here
 ├── TEMPLATE.md             ← the standard writeup template
 ├── docs/
+│   ├── CONCEPTS.md         ← ★ the fundamentals primer — read this first
 │   ├── CATALOG.md          ← index of ALL 708 VulnHub VMs
 │   ├── PROGRESS.md         ← live list of finished walkthroughs
 │   ├── LAB-SETUP.md        ← build your own lab (step by step)
@@ -59,12 +72,20 @@ Each VM has its **own folder** named after the VulnHub URL slug
 
 1. **Build your lab.** Follow [`docs/LAB-SETUP.md`](docs/LAB-SETUP.md)
    (install VirtualBox/VMware, create a host-only network, install Kali).
-2. **Pick a target.** New to this? Start with the
+2. **Learn the fundamentals.** Skim
+   [`docs/CONCEPTS.md`](docs/CONCEPTS.md) — at minimum
+   [§2 Networking](docs/CONCEPTS.md#2-networking-you-must-know-first),
+   [§5 How nmap works](docs/CONCEPTS.md#5-what-is-nmap-and-how-does-it-work), and
+   [§15 Linux privilege escalation](docs/CONCEPTS.md#15-linux-privilege-escalation).
+   You can also read it lazily: every walkthrough links into it at the point each
+   concept first comes up.
+3. **Pick a target.** New to this? Start with the
    [beginner path](docs/BEGINNER-PATH.md).
-3. **Download the OVA** from the VM's VulnHub page (linked in the catalog and in
+4. **Download the OVA** from the VM's VulnHub page (linked in the catalog and in
    each `labs/<vm>/README.md`).
-4. **Import it** into your hypervisor and boot it.
-5. **Open the walkthrough** and follow along.
+5. **Import it** into your hypervisor and boot it.
+6. **Open the walkthrough** and follow along — the 📖 Concept boxes explain the
+   *why* before each command, and `> **How to read it:**` notes explain the output.
 
 ---
 
@@ -77,7 +98,7 @@ Each VM has its **own folder** named after the VulnHub URL slug
 5. **Capture the flags** — read `user.txt` / `root.txt` (or equivalent).
 6. **Defensive lessons** — how a defender would have prevented each step.
 
-Each section in a walkup uses three kinds of blocks:
+Each section in a walkup uses four kinds of blocks:
 
 ```bash
 # The command we run (copy/paste-able)
@@ -89,6 +110,16 @@ The command's real output (or realistic representative output)
 
 > **Why it works / How to read it:** a plain-English explanation of the command
 > and its output, aimed at students.
+
+> ### 📖 Concept — what the *idea* is
+>
+> Appears at the point a technique first comes up, and explains the underlying
+> concept rather than the command: what a port scan does at the packet level, why
+> a reverse shell beats a bind shell, what makes a wordlist work, how `sudo -l`
+> is meant to be read. Each one ends with a **Deep dive** link into
+> [`docs/CONCEPTS.md`](docs/CONCEPTS.md), the repository-wide primer, so a single
+> walkthrough is self-contained while the fundamentals live in one place instead
+> of being restated 98 different ways.
 
 **Screenshots.** The console transcripts above are the primary teaching medium —
 they are complete and self-contained, so every walkthrough is fully usable as text.
@@ -118,8 +149,10 @@ references resolve immediately. Every lab folder already ships an
 | --- | --- | --- |
 | Master catalog (all VMs indexed) | 708 | ✅ Done |
 | Lab setup / tools / beginner path docs | — | ✅ Done |
+| **Fundamentals primer** ([`docs/CONCEPTS.md`](docs/CONCEPTS.md)) | 18 sections | ✅ Done |
 | Full beginner walkthroughs | **98** written | 🚧 In progress |
-| Remaining machines | 610 | 🚧 Planned (metadata stubs in place) |
+| Walkthroughs carrying 📖 Concept boxes | **98** (1,261 boxes) | ✅ Done |
+| Remaining machines | 610 | 🚧 Planned (metadata stubs, each linking to the primer) |
 
 See the live list of finished walkthroughs in
 [`docs/PROGRESS.md`](docs/PROGRESS.md).

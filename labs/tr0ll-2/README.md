@@ -1,4 +1,4 @@
-# Tr0ll: 2 — VulnHub Walkthrough (Beginner Friendly)
+﻿# Tr0ll: 2 — VulnHub Walkthrough (Beginner Friendly)
 
 | Field | Value |
 | --- | --- |

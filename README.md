@@ -118,8 +118,8 @@ references resolve immediately. Every lab folder already ships an
 | --- | --- | --- |
 | Master catalog (all VMs indexed) | 708 | ✅ Done |
 | Lab setup / tools / beginner path docs | — | ✅ Done |
-| Full beginner walkthroughs | **94** written | 🚧 In progress |
-| Remaining machines | 614 | 🚧 Planned (metadata stubs in place) |
+| Full beginner walkthroughs | **98** written | 🚧 In progress |
+| Remaining machines | 610 | 🚧 Planned (metadata stubs in place) |
 
 See the live list of finished walkthroughs in
 [`docs/PROGRESS.md`](docs/PROGRESS.md).
@@ -167,6 +167,17 @@ administration interfaces and restricted shells:
 | **SolidState: 1** | Apache James admin `root:root`, reading users' mail, CVE-2015-7611 | [`labs/solidstate-1/`](labs/solidstate-1/README.md) |
 | **Seppuku: 1** | Seven ports of rabbit holes, `rbash` escapes, a sudoers rule for a file that does not exist | [`labs/seppuku-1/`](labs/seppuku-1/README.md) |
 | **Temple of Doom: 1** | **Node.js insecure deserialisation** (CVE-2017-5941), shadowsocks injection, GTFOBins `tcpdump` | [`labs/temple-of-doom-1/`](labs/temple-of-doom-1/README.md) |
+
+Work now proceeds **series by series**, so that whole machine families complete
+together rather than as scattered one-offs. The **HA series** (17 boot2root VMs by
+Hacking Articles) is underway — these four are done:
+
+| Machine | Headline techniques | Walkthrough |
+| --- | --- | --- |
+| **HA: Wordy** | Five independent routes into one WordPress box: Reflex Gallery upload, Mail Masta **LFI**, WP Support Plus **CSRF auth bypass**, Gwolle **RFI**, WP Symposium **SQLi**, then SUID `cp`/`wget` → `/etc/passwd` overwrite | [`labs/ha-wordy/`](labs/ha-wordy/README.md) |
+| **HA: Joker** | HTTP Basic Auth brute-forced via a **base64 Burp Intruder payload**, Joomla template editing, and the **`lxd` group → privileged container** escape | [`labs/ha-joker/`](labs/ha-joker/README.md) |
+| **HA: Rudra** | **NFS `no_root_squash`** export + LFI = RCE, MySQL on loopback with an empty root password, **Cloakify emoji-cipher** decoding, `sudo watch` | [`labs/ha-rudra/`](labs/ha-rudra/README.md) |
+| **HA: Narak** | Why `nmap` without `-sU` **lies to you**, unauthenticated **TFTP**, `cewl` wordlists, WebDAV `PUT`, **Brainfuck** decoding, and **MOTD injection** (`/etc/update-motd.d/00-header` mode `777` → root) | [`labs/ha-narak/`](labs/ha-narak/README.md) |
 
 ---
 

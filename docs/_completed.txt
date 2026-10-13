@@ -1,4 +1,4 @@
-﻿basic-pentesting-1
+basic-pentesting-1
 basic-pentesting-2
 billu-b0x
 bluesky-1
@@ -44,6 +44,10 @@ funbox-rookie
 funbox-scriptkiddie
 funbox-under-construction
 goldeneye-1
+ha-joker
+ha-narak
+ha-rudra
+ha-wordy
 hackinos-1
 hacklab-vulnix
 hackme-1

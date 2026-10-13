@@ -9,6 +9,16 @@ the [catalog](CATALOG.md) — lower is easier. Tiers below are still curated by
 *teaching order* rather than raw difficulty, so ranks inside a tier need not be
 contiguous. See the [difficulty scale](../README.md#difficulty-scale).
 
+> ### ★ Prefer a full course over a list?
+>
+> **[Learning Path 1 — Introduction to Cybersecurity](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md)** turns the
+> beginner end of this page into a taught curriculum: **13 machines** in a fixed
+> order, **6 theory-and-practice modules** (networking and recon, web attacks, service
+> and network attacks, credentials and cracking, Linux privilege escalation, shells
+> and escapes), and a **lesson card per machine** with objectives, pre-lab questions,
+> a five-rung hints ladder, review questions and a defensive fix table. The four tiers
+> below remain useful as a wider menu once you have finished it.
+
 > Tip: always do the [lab setup](LAB-SETUP.md) first, and take a snapshot before
 > you attack.
 

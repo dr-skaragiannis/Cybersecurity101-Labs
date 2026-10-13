@@ -20,6 +20,21 @@ never use a bind shell, how `sudo -l` is meant to be read. Every box links to
 > wordlists, encoding vs hashing vs encryption, shells, and Linux privilege
 > escalation. Every command in every walkthrough is explained against it.
 
+> ### ★ Want a course, not a catalog?
+>
+> **[Learning Path 1 — Introduction to Cybersecurity](Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md)** is a complete,
+> ordered beginner curriculum: **13 hand-picked machines** (the easiest rated labs in
+> the repository, difficulty bands 2 and 3 only), **6 theory-and-practice modules**,
+> and a **lesson card per machine** with learning objectives, pre-lab questions, a
+> five-rung hints ladder, review questions and a defensive fix table. It was chosen by
+> reading every candidate writeup, so the 13 boxes between them cover **30+ distinct
+> attack classes** — from anonymous FTP and default credentials through SQL injection,
+> LFI, SMTP log poisoning and file-upload bypasses, to SUID abuse, `PATH` hijacking,
+> Linux capabilities and a Docker container escape.
+>
+> Start at [00 — Before You Start](Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/00-Before-You-Start.md) if you have never run a
+> lab VM before, or jump straight to [the path overview](Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md).
+
 > This repository indexes **all 708 VulnHub virtual machines** in
 > [`docs/CATALOG.md`](docs/CATALOG.md). Full walkthroughs are being added
 > machine-by-machine into [`labs/`](labs/).
@@ -46,6 +61,11 @@ Use these skills responsibly.
 Cybersecurity101-Labs/
 ├── README.md               ← you are here
 ├── TEMPLATE.md             ← the standard writeup template
+├── Learning Path 1 - Introduction to Cybersecurity/
+│   ├── README.md           ← ★ the beginner curriculum — 13 ordered machines
+│   ├── 00-Before-You-Start.md … 06-Shells-Persistence-and-Escapes.md
+│   │                       ← theory + practice modules
+│   └── Machines/           ← one lesson card per machine (hints ladder inside)
 ├── docs/
 │   ├── CONCEPTS.md         ← ★ the fundamentals primer — read this first
 │   ├── CATALOG.md          ← index of ALL 708 VulnHub VMs
@@ -54,7 +74,7 @@ Cybersecurity101-Labs/
 │   ├── BEGINNER-PATH.md    ← suggested order for newcomers
 │   └── TOOLS.md            ← the toolkit and what each tool does
 ├── labs/
-│   └── <vm-slug>/
+│   └── <band>-<rank>-<slug>/
 │       ├── README.md       ← the walkthrough for that VM
 │       └── images/         ← your screenshots for that VM
 └── catalog/
@@ -62,9 +82,15 @@ Cybersecurity101-Labs/
     └── catalog.json        ← slug/URL/metadata map
 ```
 
-Each VM has its **own folder** named after the VulnHub URL slug
-(e.g. `labs/kioptrix-level-1/`). Inside is a `README.md` (the walkthrough) and an
-`images/` folder for your screenshots.
+Each VM has its **own folder** named `<band>-<rank>-<slug>`, where *band* is the
+difficulty band (1–7 rated, 8 = writeup pending) and *rank* is the machine's position
+in one global difficulty ordering (e.g. `labs/3-046-kioptrix-level-1-1/`). Lower rank
+= easier. See the [difficulty scale](#difficulty-scale). Inside is a `README.md` (the
+walkthrough) and an `images/` folder for your screenshots.
+
+The [`Learning Path 1 - Introduction to Cybersecurity/`](Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) folder is a
+*curriculum* rather than a set of labs: it orders 13 of the `labs/` folders into a
+course and adds the theory around them, so no lab folder is duplicated.
 
 ---
 

@@ -90,11 +90,25 @@ The command's real output (or realistic representative output)
 > **Why it works / How to read it:** a plain-English explanation of the command
 > and its output, aimed at students.
 
-Screenshot placeholders use standard Markdown so you can drop in your own image:
+**Screenshots.** The console transcripts above are the primary teaching medium —
+they are complete and self-contained, so every walkthrough is fully usable as text.
+On top of that, each walkthrough also carries screenshot references using standard
+Markdown, plus a **Screenshot checklist** as its final section:
 
 ```markdown
-![nmap scan showing ports 22 and 80 open](images/01-nmap.png)
+![nmap scan showing ports 22 and 80 open](images/01-recon.png)
 ```
+
+Those `images/NN-*.png` files are **intentionally not committed**. They are
+placeholders for *you* to fill in as you work through the machine in your own lab —
+capturing your own screenshots is one of the highest-value parts of the exercise,
+because it forces you to actually run every command rather than read about it. The
+checklist at the end of each walkthrough tells you exactly which shots to take, in
+order, and the `alt` text describes what each one should show.
+
+To add them: create `labs/<slug>/images/`, drop in the numbered PNGs, and the
+references resolve immediately. Every lab folder already ships an
+`images/.gitkeep` so the directory exists.
 
 ---
 
@@ -104,15 +118,36 @@ Screenshot placeholders use standard Markdown so you can drop in your own image:
 | --- | --- | --- |
 | Master catalog (all VMs indexed) | 708 | ✅ Done |
 | Lab setup / tools / beginner path docs | — | ✅ Done |
-| Full beginner walkthroughs | **69** written | 🚧 In progress |
-| Remaining machines | 639 | 🚧 Planned (metadata stubs in place) |
+| Full beginner walkthroughs | **82** written | 🚧 In progress |
+| Remaining machines | 626 | 🚧 Planned (metadata stubs in place) |
 
 See the live list of finished walkthroughs in
 [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
 The [catalog](docs/CATALOG.md) is the single source of truth for **every** VM:
-name, difficulty (where stated), description, author, release date and the
-VulnHub link. Use it to find machines by name or date.
+name, difficulty (where stated), description, author, release date, the
+VulnHub link, and whether a local walkthrough exists yet. Use it to find
+machines by name or date.
+
+### Newest walkthroughs
+
+A batch of long-requested VulnHub classics, each with a full beginner-oriented
+guide:
+
+| Machine | Headline techniques | Walkthrough |
+| --- | --- | --- |
+| Kioptrix: 2014 (#5) | FreeBSD, LFI via pChart, User-Agent access-control bypass, PhpTax RCE, SYSRET kernel exploit | [`labs/kioptrix-2014-5/`](labs/kioptrix-2014-5/README.md) |
+| Basic Pentesting: 1 | ProFTPD 1.3.3c backdoor, WordPress `admin:admin`, writable `/etc/passwd` | [`labs/basic-pentesting-1/`](labs/basic-pentesting-1/README.md) |
+| Basic Pentesting: 2 | SMB/`enum4linux`, Hydra, SSH-key cracking, Struts2 CVE-2017-9805 | [`labs/basic-pentesting-2/`](labs/basic-pentesting-2/README.md) |
+| Lord Of The Root: 1.0.1 | Port knocking, nested base64, SQLi, overlayfs, MySQL UDF, **hand-written buffer overflow** | [`labs/lord-of-the-root-101/`](labs/lord-of-the-root-101/README.md) |
+| FristiLeaks: 1.3 | Base64 image in HTML, file-upload filter bypass, insecure cron, SUID via `sudo -u` | [`labs/fristileaks-13/`](labs/fristileaks-13/README.md) |
+| HackLAB: Vulnix | `finger`/SMTP enumeration, NFS `root_squash`, UID impersonation, `sudoedit /etc/exports` | [`labs/hacklab-vulnix/`](labs/hacklab-vulnix/README.md) |
+| VulnOS: 2 | OpenDocMan SQLi (CVE-2014-1945), Drupalgeddon2, overlayfs | [`labs/vulnos-2/`](labs/vulnos-2/README.md) |
+| SickOs: 1.2 | WebDAV `PUT` upload, HTTP 417 gotcha, egress firewall, chkrootkit CVE-2014-0476 | [`labs/sickos-12/`](labs/sickos-12/README.md) |
+| Tr0ll: 2 | Image metadata forensics, ZIP cracking, Shellshock over SSH, manual 32-bit buffer overflow | [`labs/tr0ll-2/`](labs/tr0ll-2/README.md) |
+| zico2: 1 | LFI, phpLiteAdmin CVE-2012-4162, LFI→RCE chaining, Dirty COW | [`labs/zico2-1/`](labs/zico2-1/README.md) |
+| Bulldog: 1 | SHA-1 hashes in HTML comments, Django admin, web-shell filter bypass, `strings` on an ELF | [`labs/bulldog-1/`](labs/bulldog-1/README.md) |
+| Chill Hack: 1 | Anonymous FTP, command-injection filter bypass, SSH port forwarding, steganography, Docker→root | [`labs/chill-hack-1/`](labs/chill-hack-1/README.md) |
 
 ---
 

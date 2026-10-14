@@ -182,6 +182,15 @@ you what matters for *this* path, the primer explains everything.
 | [`05-Linux-Privilege-Escalation.md`](05-Linux-Privilege-Escalation.md) | Machines 1, 3, 6, 7, 8, 9, 10, 11, 12, 13 | `sudo`, SUID, capabilities, cron, writable files, `/etc/passwd`, kernel, PATH hijacking |
 | [`06-Shells-Persistence-and-Escapes.md`](06-Shells-Persistence-and-Escapes.md) | Machines 1, 4, 6, 9, 10, 12, 13 | Reverse vs bind shells, TTY upgrades, `rbash` escapes, container escapes, cleanup and reporting |
 
+**Every module ends with an *Annotated command reference*, and every machine card ends
+with *The commands, annotated*.** Those sections walk through each command you will type
+in that stage — token by token: what each flag means, the real terminal output you should
+see, and a line-by-line reading of that output, plus what the usual failure messages mean.
+Read the module for the *concepts*, then read its annotated reference while you are at the
+keyboard. If a command's output on your box differs from the one shown, the annotated
+section tells you whether the difference matters.
+
+
 ---
 
 ## Progress tracker

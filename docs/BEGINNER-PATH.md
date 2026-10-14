@@ -18,6 +18,11 @@ contiguous. See the [difficulty scale](../README.md#difficulty-scale).
 > and escapes), and a **lesson card per machine** with objectives, pre-lab questions,
 > a five-rung hints ladder, review questions and a defensive fix table. The four tiers
 > below remain useful as a wider menu once you have finished it.
+>
+> **Μιλάς Ελληνικά;** Ολόκληρη η διαδρομή υπάρχει και στα Ελληνικά:
+> **[Μαθησιακή Διαδρομή 1 — Εισαγωγή στην Κυβερνοασφάλεια](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md)**.
+> Οι εντολές, τα εργαλεία και τα αποτελέσματα τερματικού παραμένουν στα Αγγλικά·
+> όλη η επεξήγηση είναι στα Ελληνικά.
 
 > Tip: always do the [lab setup](LAB-SETUP.md) first, and take a snapshot before
 > you attack.

@@ -34,6 +34,13 @@ never use a bind shell, how `sudo -l` is meant to be read. Every box links to
 >
 > Start at [00 — Before You Start](Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/00-Before-You-Start.md) if you have never run a
 > lab VM before, or jump straight to [the path overview](Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md).
+>
+> **Μιλάς Ελληνικά;** Η ίδια διαδρομή υπάρχει ολοκληρωμένη στα Ελληνικά:
+> **[Μαθησιακή Διαδρομή 1 — Εισαγωγή στην Κυβερνοασφάλεια](%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md)**
+> (ξεκινήστε από το [00 — Πριν Ξεκινήσεις](%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/00-%CE%A0%CF%81%CE%B9%CE%BD-%CE%9E%CE%B5%CE%BA%CE%B9%CE%BD%CE%AE%CF%83%CE%B5%CE%B9%CF%82.md)). Οι εντολές, τα εργαλεία,
+> οι σημαίες και τα πραγματικά αποτελέσματα τερματικού παραμένουν στα Αγγλικά —
+> όπως εμφανίζονται σε οποιοδήποτε πραγματικό σύστημα· όλη η επεξήγηση, κάθε
+> εννοιολογικό κουτί, κάθε ερώτηση και κάθε αμυντική σημείωση είναι στα Ελληνικά.
 
 > This repository indexes **all 708 VulnHub virtual machines** in
 > [`docs/CATALOG.md`](docs/CATALOG.md). Full walkthroughs are being added
@@ -65,7 +72,11 @@ Cybersecurity101-Labs/
 │   ├── README.md           ← ★ the beginner curriculum — 13 ordered machines
 │   ├── 00-Before-You-Start.md … 06-Shells-Persistence-and-Escapes.md
 │   │                       ← theory + practice modules
-│   └── Machines/           ← one lesson card per machine (hints ladder inside)
+│   │   └── Machines/           ← one lesson card per machine (hints ladder inside)
+├── Μαθησιακή Διαδρομή 1 - Εισαγωγή στην Κυβερνοασφάλεια/
+│   ├── README.md           ← ★ το ίδιο μάθημα, ολοκληρωμένο στα Ελληνικά
+│   ├── 00-Πριν-Ξεκινήσεις.md … 06-Κελύφη-Εμμονή-και-Διαφυγές.md
+│   └── Μηχανές/            ← μία κάρτα μαθήματος ανά μηχάνημα
 ├── docs/
 │   ├── CONCEPTS.md         ← ★ the fundamentals primer — read this first
 │   ├── CATALOG.md          ← index of ALL 708 VulnHub VMs
@@ -91,6 +102,14 @@ walkthrough) and an `images/` folder for your screenshots.
 The [`Learning Path 1 - Introduction to Cybersecurity/`](Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) folder is a
 *curriculum* rather than a set of labs: it orders 13 of the `labs/` folders into a
 course and adds the theory around them, so no lab folder is duplicated.
+
+[`Μαθησιακή Διαδρομή 1 - Εισαγωγή στην Κυβερνοασφάλεια/`](%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md) is the **complete
+Greek edition** of that same curriculum: the same 13 machines, the same six theory modules and
+the same thirteen lesson cards, rewritten in Greek. Commands, tool names, flags, file paths and
+real terminal output stay in English, because that is how they appear on any real system; every
+explanation, concept box, question, hint rung and defensive note is in Greek. The English folder
+is the source of truth for wording — the Greek folder is a full mirror, not a summary, and each
+card cross-links to its English twin.
 
 ---
 

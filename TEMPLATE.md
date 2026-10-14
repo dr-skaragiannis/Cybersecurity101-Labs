@@ -1,12 +1,20 @@
 # <Machine Name> — VulnHub Walkthrough (Beginner Friendly)
 
-> **Copy this file to `labs/<vm-slug>/README.md` and fill in each section.**
+> **Copy this file to `labs/<band>-<rank>-<slug>/README.md` and fill in each section.**
+>
+> The folder name encodes difficulty: `<band>` is `1`–`7` on the
+> [difficulty scale](README.md#difficulty-scale) (`8` = unrated, writeup pending),
+> `<rank>` is the machine's position in the global `001`–`708` difficulty ordering,
+> and `<slug>` is the original VulnHub identifier. When you finish a writeup, rate it,
+> then update the folder name, the `#` column in
+> [`docs/CATALOG.md`](docs/CATALOG.md) and [`docs/PROGRESS.md`](docs/PROGRESS.md),
+> and [`docs/_completed.txt`](docs/_completed.txt).
 > Replace every `<...>` placeholder. Keep the explanations — they are the point.
 
 | Field | Value |
 | --- | --- |
 | **Machine** | <name> |
-| **Difficulty** | <Easy / Medium / Hard / N/A> |
+| **Difficulty** | **`<1–7>` — `<Ultra Easy / Very Easy / Easy / Medium / Difficult / Very Difficult / Ultra Difficult>`** (stated: *`<the author's or VulnHub's own wording>`*) |
 | **Author** | <author> |
 | **Released** | <date> |
 | **VulnHub Entry** | <https://vulnhub.com/entry/...> |

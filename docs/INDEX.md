@@ -21,6 +21,7 @@
 | Document | What it is |
 | --- | --- |
 | [`CONCEPTS.md`](CONCEPTS.md) | The **18-section primer**: networking, nmap, enumeration, wordlists, encoding vs hashing vs encryption, shells, Linux privilege escalation, post-exploitation, reporting. Read it once and every lab becomes predictable. |
+| [`GLOSSARY.md`](GLOSSARY.md) · [`ΓΛΩΣΣΑΡΙ.md`](ΓΛΩΣΣΑΡΙ.md) | **English ↔ Greek glossary** of every technical noun used in the repository, with plain-language definitions. |
 
 ---
 

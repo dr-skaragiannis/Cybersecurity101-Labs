@@ -98,6 +98,7 @@ Cybersecurity101-Labs/
 │   └── Μηχανές/            ← μία κάρτα μαθήματος ανά μηχάνημα (Μέρη Α–Η)
 ├── docs/
 │   ├── CONCEPTS.md         ← ★ the fundamentals primer — read this first
+│   ├── GLOSSARY.md         ← ★ English ↔ Greek glossary of technical terms
 │   ├── CATALOG.md          ← index of ALL 708 VulnHub VMs
 │   ├── PROGRESS.md         ← live list of finished walkthroughs
 │   ├── LAB-SETUP.md        ← build your own lab (step by step)
@@ -105,6 +106,7 @@ Cybersecurity101-Labs/
 │   ├── TOOLS.md            ← the toolkit and what each tool does
 │   ├── AUDIT.md            ← repository audit + antivirus fix (English)
 │   ├── ΑΝΑΘΕΩΡΗΣΗ.md        ← ο ίδιος απολογισμός στα Ελληνικά
+│   ├── ΓΛΩΣΣΑΡΙ.md          ← ★ γλωσσάρι όρων (Ελληνικά ↔ Αγγλικά)
 │   ├── INDEX.md            ← ★ the whole repository in reading order (English)
 │   └── ΕΥΡΕΤΗΡΙΟ.md         ← ★ όλο το αποθετήριο σε σειρά ανάγνωσης (Ελληνικά)
 ├── labs/

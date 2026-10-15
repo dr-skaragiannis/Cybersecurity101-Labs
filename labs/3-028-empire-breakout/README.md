@@ -1306,7 +1306,8 @@ drwxr-xr-x 4 cyber cyber 4096 May  4 18:40 ..
   - [jacksondillow82 — Empire: Breakout (Walk-through)](https://medium.com/@jacksondillow82/empire-breakout-walk-through-e419ebf426e0)
   - [ra2302 — Vulnhub Empire Breakout Writeup](https://ra2302.github.io/posts/Breakout/)
   - [unbound3d — Vulnhub's EMPIRE BREAKOUT CTF Walk-through](https://unbound3d.gitbook.io/empire-breakout/)
-  - [InfoSec Institute — EMPIRE BREAKOUT: VulnHub CTF walkthrough](https://www.infosecinstitute.com/resources/capture-the-flag/empire-breakout-vulnhub-ctf-walkthrough/)
+  - [The Village Hacker — Empire-breakout](https://thevillagehacker-security.gitbook.io/ctf-writeups/2023-10-01-proving_grounds_play-empire-breakout)
+  - [Security Akademeia — Empire: Breakout](https://akademeia.info/?p=27242)
   - [Jason_huawen — Empire Breakout 攻略](https://www.cnblogs.com/jason-huawen/p/16144038.html)
 - Advisories / background:
   - [`capabilities(7)` man page — the definitive reference](https://man7.org/linux/man-pages/man7/capabilities.7.html)

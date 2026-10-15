@@ -1751,7 +1751,7 @@ bin  boot  dev  etc  home  initrd.img  lib  ...  root  ...
   - [`ffuf`](https://github.com/ffuf/ffuf) · [`wfuzz`](https://github.com/xmendez/wfuzz) · [`gobuster`](https://github.com/OJ/gobuster)
   - [John the Ripper — crypt formats](https://www.openwall.com/john/doc/README.md)
   - [HackTricks — Bypassing image upload restrictions](https://book.hacktricks.xyz/pentesting-web/file-upload)
-  - [HackTricks — Container escape / Docker breakout](https://book.hacktricks.xyz/linux-hardening/privilege-escalation/docker-security/docker-breakout-privilege-escalation)
+  - [HackTricks — Container escape / Docker breakout](https://hacktricks.wiki/en/linux-hardening/privilege-escalation/docker-security/docker-breakout-privilege-escalation.html)
   - [pentestmonkey — Reverse Shell Cheat Sheet](https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet)
 
 

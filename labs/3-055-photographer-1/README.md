@@ -1500,7 +1500,8 @@ drwx------  2 root root 4096 Jul 21  2020 .ssh
   - [cyberarri — Photographer: 1 Writeup](https://cyberarri.com/2022-08-07/photographer-1-writeup/)
   - [cyberdai — Photography VulnHUB Walkthrough](https://cyberdai.org/posts/vulnhub/vulnhub-photography/)
   - [vshaliii — Photographer1-Vulnhub-Walkthrough (GitHub)](https://github.com/vshaliii/Photographer1-Vulnhub-Walkthrough)
-  - [InfoSec Institute — Photographer 1: CTF walkthrough](https://resources.infosecinstitute.com/topic/photographer-1-ctf-walkthrough-part-1/)
+  - [root&beer — Photographer 1 Walkthrough](https://rootandbeer.com/walkthroughs/photographer-1/)
+  - [Hitesh Kadu — Photographer Writeup](https://hitesh1210.github.io/posts/photographer-Writeup/)
 - Exploits / background:
   - [Exploit-DB 48706 — Koken CMS 0.22.24 Arbitrary File Upload](https://www.exploit-db.com/exploits/48706)
   - [Koken CMS (discontinued) — <https://koken.me>](https://koken.me/)

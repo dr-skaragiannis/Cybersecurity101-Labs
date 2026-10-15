@@ -655,7 +655,9 @@ congratulations
 
 - bossplayersCTF: 1 on VulnHub — https://vulnhub.com/entry/bossplayersctf-1,375/
 - Hacking Articles — "bossplayersCTF 1: Vulnhub Walkthrough" — https://www.hackingarticles.in/bossplayersctf-1-vulnhub-walkthrough/
-- Infosec Institute — "bossplayersctf 1: VulnHub CTF walkthrough" — https://www.infosecinstitute.com/resources/capture-the-flag/bossplayersctf-1-vulnhub-ctf-walkthrough/
+- HackNos — "bossplayersCTF 1 Walkthrough" — https://www.hacknos.com/bossplayersctf-1-walkthrough-vulnhub/
+- Shendayan — "BossplayersCTF Writeup" — https://shendayan.github.io/CTF-Writeups/BossplayersCTF/EN.html
+- ~~Infosec Institute~~ — domain now blocks automated access (HTTP 403); replaced by the two writeups above.
 - OWASP — "OS Command Injection" — https://owasp.org/www-community/attacks/Command_Injection
 - GTFOBins — `find` — https://gtfobins.github.io/gtfobins/find/
 - pentestmonkey — Reverse Shell Cheat Sheet — https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet

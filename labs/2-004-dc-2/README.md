@@ -15,6 +15,9 @@
 | **Attacker** | Kali Linux (attacker 192.168.56.10, target 192.168.56.101) |
 | **Target OS** | Linux — Debian (Apache 2.4.10 + WordPress, OpenSSH on a non-standard port) |
 
+> ?? **Learning Path 1 ? Machine 4 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/04-dc-2.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/04-dc-2.md)** ? Previous in path: [Machine 3 ? DC: 1](../2-003-dc-1/README.md) ? Next in path: [Machine 5 ? Kioptrix: Level 1 (#1)](../3-046-kioptrix-level-1-1/README.md)
+
 > **Note:** exact banners, ports and file contents can differ slightly between the
 > VirtualBox and VMware builds of this box ("varies by build"). The attack *chain*
 > below is stable; small details (a service version, a password) may move around.
@@ -800,6 +803,20 @@ cat /root/flag5.txt
   - [Vulnhub – DC2 Walkthrough — mzfr](https://blog.mzfr.me/vulnhub-writeups/2019-07-12-DC2)
   - [vshaliii/DC-2-Vulnhub-Walkthrough (GitHub)](https://github.com/vshaliii/DC-2-Vulnhub-Walkthrough)
   - [DC-2: Vulnhub Walkthrough — Hunterstring (Medium)](https://medium.com/@hunterstring988/dc-2-vulnhub-walkthrough-9f5ea95f5560)
+
+
+### Community notes — consensus, pitfalls and alternative routes (cross-checked against the sources below):
+
+- **Consensus chain:** add `dc-2` to `/etc/hosts` → flag1 "cewl" hint → `wpscan -e u` (admin, tom, jerry) → `cewl` list → `wpscan` brute → `tom:parturient` / `jerry:adipiscing` → log in to the dashboard (flag 2) → SSH 7744 as `tom` → `rbash` escape via `vi` → `su jerry` → `sudo -l` → git pager → root.
+- **Common pitfall:** scan with `-p-`; a default top-1000 scan never sees SSH on 7744 and people wrongly conclude there is no SSH.
+- **Common pitfall:** right after the `vi` escape every command is "not found" — fix `PATH` (and `SHELL`); `su` also needs a real TTY, so escape `rbash` first.
+- **Common pitfall:** credential **reuse between the CMS and the OS** is the point of the box — `su jerry` works because `adipiscing` is *jerry's own* password in both systems; Tom and Jerry do **not** share a password with each other (`tom: parturient` is a different string).
+- **Alternative route:** any `git` pager escape works — `sudo git -p help config` → `!/bin/sh` or `sudo git help add` → `!/bin/bash`; GTFOBins also lists `sudo PAGER='/bin/sh -c "exec sh 0<&1"' git -p help`, `sudo git branch --help config`, and git-hook / `--exec-path` payloads.
+- **⚠️ Verification note (final flag filename):** this card and the repo's own lab walkthrough show the proof file as `/root/flag5.txt`, while **Hacking Articles** and **vshaliii** both show `/root/final-flag.txt`; the lab README explicitly warns that file contents "can differ slightly between builds". The table value is kept — run `ls /root/` when you get there.
+- **⚠️ Verification note (who owns the sudo rule):** Hacking Articles' *prose* attributes the `(root) NOPASSWD: /usr/bin/git` rule to `tom`, but mzfr and vshaliii both run `sudo -l` as **jerry**, and the repo's lab writeup prints `User jerry may run the following commands on DC-2:`. The card keeps `jerry` — also the only order the chain allows, since `sudo -l` is reached *after* `su jerry`.
+- **⚠️ Verification note (`vim` is not SUID here):** none of the fetched writeups show a SUID bit on `vim` — the Step 7 escape works simply because `vi` is one of the few commands left in tom's pinned `PATH`. If your build *does* ship a SUID `vim`, the GTFOBins `vim` payload (`sudo vim -c ':!sh'`) escalates directly.
+- **⚠️ Verification note (WordPress version):** the metadata table keeps **4.7.10** (vshaliii's wpscan reports "WordPress version 4.7.10 (Released on 2018-04-03)"), while the repo lab walkthrough's sample nmap output shows 4.7.3 — both fit their own build, and the README says details vary by build. Re-run your own enumeration to learn your build's truth.
+- **Verified sources:** [mzfr](https://blog.mzfr.me/vulnhub-writeups/2019-07-12-DC2) · [Hacking Articles](https://www.hackingarticles.in/dc-2-walkthrough/) · [vshaliii (GitHub)](https://github.com/vshaliii/DC-2-Vulnhub-Walkthrough) · [GTFOBins — git](https://gtfobins.github.io/gtfobins/git/)
 
 ---
 

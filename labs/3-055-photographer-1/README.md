@@ -12,6 +12,9 @@
 | **Target OS** | Ubuntu 16.04 — Apache 2.4.18, Samba 4.3.11, **Koken CMS 0.22.24**, PHP 7.2 |
 | **Flags** | **Two** — `/home/daisa/user.txt` and `/root/proof.txt` |
 
+> ?? **Learning Path 1 ? Machine 11 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/11-photographer-1.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/11-photographer-1.md)** ? Previous in path: [Machine 10 ? PwnLab: init](../3-057-pwnlab-init/README.md) ? Next in path: [Machine 12 ? symfonos: 1](../3-062-symfonos-1/README.md)
+
 Throughout we assume:
 
 ```text
@@ -1508,6 +1511,18 @@ drwx------  2 root root 4096 Jul 21  2020 .ssh
   - [`smbmap`](https://github.com/ShawnDEvans/smbmap) · [`enum4linux`](https://github.com/CiscoCXSecurity/enum4linux) · [`smbclient(1)`](https://www.samba.org/samba/docs/current/man-html/smbclient.1.html)
   - [Burp Suite — Intercept and Match & Replace](https://portswigger.net/burp/documentation/desktop/tools/proxy)
   - [pentestmonkey — PHP reverse shell](https://pentestmonkey.net/tools/web-shells/php-reverse-shell)
+
+
+### Community notes — consensus, pitfalls and alternative routes (cross-checked against the sources below):
+
+- **Consensus chain:** `nmap -p-` → `80/139/445/8000` → anonymous SMB `sambashare` → `mailsent.txt` hint (`babygirl`) → Koken 0.22.24 on :8000, `/admin/` → login `daisa@photographer.com:babygirl` → EDB 48706 → upload `shell.php.jpg`, strip `.jpg` in Burp → execute `/storage/originals/xx/xx/shell.php` → www-data → SUID `/usr/bin/php7.2` → `pcntl_exec('/bin/sh',['-p'])` → root.
+- **Common pitfall:** `-p` is mandatory — without it bash drops the effective UID and `id` never shows `euid=0`; use the absolute `/usr/bin/php7.2`, since a PATH-resolved `php` may not be SUID.
+- **Common pitfall:** the extension tamper must be done in Burp (the browser JS blocks `.php`), and the upload path is a two-level **hashed** directory revealed only after upload — do not guess it; hover **Download File** in the Content library or read it out of the import JSON response.
+- **Common pitfall:** `/home/daisa/user.txt` is `-rw-------`, so `www-data` cannot read it — you need `su daisa` (password `babygirl`), i.e. CMS→system credential reuse.
+- **Alternative route:** `wordpress.bkp.zip` is a decoy (no `wp-config.php`); LinPEAS also finds local MySQL credentials in Koken's config (`/var/www/html/koken/storage/configuration/database.php`, user `kokenuser`), whose `koken_users` table stores daisa's bcrypt hash; and a Meterpreter `php/meterpreter/reverse_tcp` payload works instead of the pentestmonkey shell (tbhaxor).
+- ⚠️ **Verification note:** one writeup (Hitesh Kadu) shows `user.txt` read directly as `www-data`, while the repository's full lab and others hit `Permission denied` on `-rw-------` — treat `su daisa` (or root) as required on the current image.
+- ⚠️ **Verification note:** `wordpress.bkp.zip` is ~12.7 MB in the repository's lab run but ~13.9 MB in other writeups — the image was re-exported; the size is cosmetic and the contents (stock WordPress, decoy) are the same.
+- **Verified sources:** [root&beer](https://rootandbeer.com/walkthroughs/photographer-1/) · [Infosec Articles](https://www.infosecarticles.com/photographer-1-vulnhub-walkthrough) · [tbhaxor](https://tbhaxor.com/vulnhub-photographer-writeup/) · [Hitesh Kadu](https://hitesh1210.github.io/posts/photographer-Writeup/)
 
 ---
 

@@ -223,7 +223,88 @@ Two corollaries worth internalising early:
 
 ---
 
-## 6. What to read next
+## 6. The method — five stages, always in the same order
+
+```text
+  1. RECONNAISSANCE      2. ENUMERATION        3. EXPLOITATION
+  "what exists?"   →     "what runs, and     "how do I get in?"
+   IP, MAC, live          which version?"
+   hosts                  ports, services,
+                          versions, CMS, users
+
+           5. REPORT &           4. PRIVILEGE ESCALATION
+           CLEANUP       ←       & POST-EXPLOITATION
+           what I found,          "how do I become root?"
+           how to fix it          sudo, SUID, capabilities,
+                                  cron, kernel
+```
+
+### What each stage really means
+
+**1. Reconnaissance.** Finding that a target *exists*. In the lab: which IPs are live on my
+network. In a real engagement: subdomains, IP ranges owned by the company, database leaks,
+employees on LinkedIn, the technologies a site uses. **You send almost nothing to the target
+yet** — you look *around* it.
+
+**2. Enumeration.** Now you *talk* to the target. Which ports answer? Which service and which
+**version** runs on each port? Which CMS? Which users exist? Which filenames return 200?
+**Enumeration is 80% of the work.** Almost every success in this path comes from better
+enumeration, not from a cleverer exploit.
+
+**3. Exploitation.** Using a vulnerability for access. It is rarely exotic: usually an old
+version with a published exploit, a default setting, or a weak password.
+
+**4. Privilege escalation.** You are in, but as `www-data` — an anonymous service account with
+no rights. Now you look for misconfigurations: `sudo`, SUID, capabilities, cron, writable
+files, an outdated kernel.
+
+**5. Reporting and cleanup.** What did you leave behind? What did you upload? What did you
+delete? In a real engagement this is called **remediation** and it is a contractual obligation.
+
+## 7. Self-check
+
+Answer without looking. If you struggle, re-read the matching section.
+
+<details>
+<summary><b>1.</b> What does <code>192.168.56.0/24</code> mean, and how many usable addresses does it give?</summary>
+
+The first 24 bits are the network prefix (`192.168.56`), the remaining 8 are the host.
+2⁸ = **256** addresses (`.0`–`.255`), of which `.0` is the network address and `.255` the
+broadcast address — so **254 usable**.
+</details>
+
+<details>
+<summary><b>2.</b> What is the difference between <code>></code> and <code>>></code>?</summary>
+
+`>` **replaces** the file's contents; `>>` **appends**. `>` is dangerous because you lose data
+without warning.
+</details>
+
+<details>
+<summary><b>3.</b> Why does <code>cmd > out.txt 2>&1</code> capture errors but <code>cmd 2>&1 > out.txt</code> not?</summary>
+
+Because redirection is evaluated **left to right**. In the first form fd 1 goes to the file
+first, and *then* fd 2 copies fd 1's destination (the file). In the second, at the moment fd 2
+copies fd 1, fd 1 still points at the screen.
+</details>
+
+<details>
+<summary><b>4.</b> What are the five stages, and where do you actually "talk" to the target?</summary>
+
+Reconnaissance → Enumeration → Exploitation → Privilege escalation → Reporting/cleanup.
+Reconnaissance happens **around** the target (files, logs, third-party sources); from
+enumeration onward you send packets **to** the target and appear in its logs.
+</details>
+
+<details>
+<summary><b>5.</b> Why must the lab be host-only and not bridged?</summary>
+
+On a bridged network the target is a member of your real network: it can scan you back, and it
+can **send outward** (a reverse shell to the wrong address, a worm, ARP poisoning), and see your
+other machines. Host-only creates an isolated network between host and VM only.
+</details>
+
+## 8. What to read next
 
 Before Machine 1, read [`01-Foundations-Networking-and-Recon.md`](01-Foundations-Networking-and-Recon.md).
 
@@ -245,7 +326,7 @@ Also worth knowing about:
 
 ---
 
-## 7. Annotated command reference — the terminal itself
+## 9. Annotated command reference — the terminal itself
 
 Everything in this path is typed into a terminal. This section reads the commands you will
 use most, with their inputs explained and their outputs decoded. Work through it once with
@@ -253,7 +334,7 @@ a terminal open; it will save you hours later.
 
 ---
 
-### 7.1 Reading a prompt, and the anatomy of a command line
+### 9.1 Reading a prompt, and the anatomy of a command line
 
 ```text
 kali@kali:~/Cybersecurity101-Labs$ sudo nmap -sV -p- 192.168.56.104 > scan.txt 2>&1 | tee -a log.txt
@@ -283,7 +364,7 @@ process.
 
 ---
 
-### 7.2 Navigation and listing
+### 9.2 Navigation and listing
 
 ```bash
 pwd
@@ -331,7 +412,7 @@ succeeded.
 
 ---
 
-### 7.3 Reading files without destroying them
+### 9.3 Reading files without destroying them
 
 ```bash
 cat /etc/hostname
@@ -383,7 +464,7 @@ know how many lines a block occupies, `-A`/`-C` beats running the command five t
 
 ---
 
-### 7.4 Permissions
+### 9.4 Permissions
 
 ```bash
 ls -l /opt/md5check.py
@@ -425,7 +506,7 @@ The octal digits are just `r=4, w=2, x=1` added per triad: owner, group, other. 
 
 ---
 
-### 7.5 Finding things
+### 9.5 Finding things
 
 ```bash
 find / -name '*.php' -type f 2>/dev/null | head -20
@@ -453,7 +534,7 @@ find . -exec /bin/sh \; -quit
 
 ---
 
-### 7.6 Pipes, redirection and getting files across
+### 9.6 Pipes, redirection and getting files across
 
 ```bash
 nmap -sV TARGET | grep open
@@ -499,7 +580,7 @@ problems.
 
 ---
 
-### 7.7 Processes, and knowing where you are
+### 9.7 Processes, and knowing where you are
 
 ```bash
 ps aux | head
@@ -542,7 +623,7 @@ shell to raw mode, so you can set the remote side to match.
 
 ---
 
-### 7.8 Job control and terminal repair
+### 9.8 Job control and terminal repair
 
 | Keys / command | What happens |
 | --- | --- |
@@ -568,7 +649,7 @@ is `nc`. Module 06 explains the fix (`stty raw -echo`).
 
 ---
 
-### 7.9 Getting help — the three levels
+### 9.9 Getting help — the three levels
 
 ```bash
 nmap --help              # 1. a quick summary of the most common flags
@@ -590,6 +671,116 @@ Inside `man`: press `/`, type your search, Enter; `n` for the next match, `N` fo
 previous; `q` to quit. Searching a man page for a flag you half-remember is faster than
 searching the web, works offline, and is accurate for the version you actually have
 installed — which the web is not.
+
+---
+
+### 9.10 Basic Linux commands — files, directories and editors
+
+The tools in this course are only half the story. The other half is **moving around a
+filesystem and editing a file** without leaving the terminal. These are the commands you will
+type more than any other, so learn them here once.
+
+**Navigation and directories**
+
+```bash
+pwd                       # print working directory — "where am I?"
+ls                        # list the current directory
+ls -la /etc               # long format, including hidden files
+cd /var/www/html          # change directory
+cd ..                     # go UP one level
+cd ../..                  # up two levels
+cd -                      # back to the PREVIOUS directory
+cd                        # with no argument: go home (~)
+cd ~/scans && ls          # && runs the next command only if the first succeeded
+mkdir scans               # make a directory
+mkdir -p a/b/c            # -p makes parent directories too, and does not fail if they exist
+```
+
+**Creating, copying, moving and deleting**
+
+```bash
+touch notes.md            # create an empty file (or update its timestamp)
+echo "hello" > f.txt      # write to a file (overwrites it)
+echo "more"  >> f.txt     # append to a file
+cat > f.txt <<'EOF'       # heredoc: type several lines, end with a line containing EOF
+line one
+line two
+EOF
+cp f.txt f.bak            # copy a file
+cp -r dir/ dir.bak/       # copy a directory (-r = recursive)
+mv f.txt g.txt            # RENAME (same directory)
+mv f.txt /tmp/            # MOVE (different directory)
+rm f.txt                  # delete a file  — there is no undo
+rm -r dir/                # delete a directory and everything in it
+rm -f f.txt               # force, never prompt
+```
+
+> **`mv` is "rename OR move" — it is the same command.** And **`rm` has no recycle bin**: on a
+> real engagement, deleting the wrong file destroys evidence. Before `rm -r`, run `ls` on the
+> same path. (This is also why you take **snapshots** — §2.)
+
+**Reading and editing**
+
+```bash
+cat /etc/hostname         # print a (short) file
+less /etc/passwd          # page through a file: /search, n next, G end, q quit
+nano notes.md             # the beginner editor — see keys below
+vim notes.md              # the pro editor — see survival kit below
+```
+
+**`nano`** is the friendly one. The keys it shows at the bottom are `^` = `Ctrl`:
+
+| Key | Action |
+| --- | --- |
+| `Ctrl+O`, Enter | **save** (Write Out) |
+| `Ctrl+X` | **exit** (asks to save if you changed something) |
+| `Ctrl+W` | search |
+| `Ctrl+K` / `Ctrl+U` | cut the current line / paste it back |
+
+**`vim`** is everywhere and will not go away, so learn the **survival kit** — you can do 95% of
+lab work with these:
+
+| Key | Action |
+| --- | --- |
+| `i` | **insert** mode (start typing). `Esc` returns to normal mode |
+| `Esc` | leave insert mode (do this before any `:` command) |
+| `:w` | write (save) |
+| `:q` | quit |
+| `:wq` or `:x` | save **and** quit |
+| `:q!` | quit **without** saving |
+| `/word` then Enter | search; `n` next, `N` previous |
+| `dd` | delete a line · `u` undo · `gg` top · `G` bottom |
+
+> **Why `vim` matters beyond editing.** It is a **privilege-escalation primitive**: if a SUID
+> binary or a `sudo` rule lets you run `vim`, then `:!sh` gives you a shell as its owner
+> ([GTFOBins](https://gtfobins.github.io/gtfobins/vim/)). It is also how you **escape `rbash`**
+> (Machine 4): `:set shell=/bin/bash` then `:shell`. The same applies to `nano` (`^R` `^X`),
+> `less` (`!sh`) and `man` (`!sh`).
+
+**A five-second orientation habit.** When you land on a new box, run these before anything else:
+
+```bash
+id; whoami; hostname; pwd; uname -a; cat /etc/os-release
+```
+
+They tell you *who you are*, *where you are*, and *what the machine is* — the three things every
+later decision depends on.
+
+### 9.11 Windows / Antivirus — keeping your lab files safe
+
+If you cloned this repository on Windows, Windows Defender may flag educational PHP/reverse-shell snippets inside Markdown files as false positives. To exclude the repository folder (once, in an elevated PowerShell prompt) and restore any quarantined files from git:
+
+```powershell
+Add-MpPreference -ExclusionPath "C:\path\to\Cybersecurity101-Labs"
+(Get-MpPreference).ExclusionPath
+```
+
+```bash
+git status            # check whether any tracked files were removed
+git checkout -- .     # restore all tracked files from git
+```
+
+See the full walkthrough in [`docs/LAB-SETUP.md` §10](../docs/LAB-SETUP.md#10-windows--antivirus--keep-your-lab-files-from-being-deleted) and [`docs/AUDIT.md`](../docs/AUDIT.md).
 
 ---
 

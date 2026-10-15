@@ -180,6 +180,10 @@ PORT   STATE SERVICE VERSION
 80/tcp open  http    Apache/2.x (varies by build)
 ```
 
+> **How to read it:** three ports — `21` FTP, `22` SSH, `80` HTTP. The **service and version**
+> columns are what you feed to `searchsploit`. "varies by build" is a reminder that a lab's
+> banners change between releases — read **your own** output, not the one in this document.
+
 > **Why it works:** Nmap identifies attack surface: which services are listening and what versions they are.
 
 ![nmap scan](images/02-nmap.png)

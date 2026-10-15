@@ -11,6 +11,9 @@
 | **Attacker** | Kali Linux (attacker IP `192.168.56.10`, target IP `192.168.56.101`) |
 | **Target OS** | Linux (Red Hat era) |
 
+> ?? **Learning Path 1 ? Machine 5 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/05-kioptrix-level-1-1.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/05-kioptrix-level-1-1.md)** ? Previous in path: [Machine 4 ? DC: 2](../2-004-dc-2/README.md) ? Next in path: [Machine 6 ? bossplayersCTF: 1](../3-016-bossplayersctf-1/README.md)
+
 ## 0. What you will learn
 
 - **Network discovery:** How to locate a vulnerable VM on your local lab network.
@@ -505,6 +508,22 @@ These are real community writeups that document the same path and were consulted
 - [Kioptrix Level 1 — VulnQuest](https://vulnquest58.github.io/ctf/writeups/vulnhub/kioptrix)
 - [Kioptrix Level 1 – Samba trans2open Exploit — Cyberdrek01 (GitHub)](https://github.com/Cyberdrek01/KIOPTRIX-LEVEL1-SAMBA-TRANS2OPEN)
 - [VulnHub Official Entry — Kioptrix: Level 1 (#1)](https://vulnhub.com/entry/kioptrix-level-1-1,22/)
+
+### Community notes — consensus, pitfalls and alternative routes (cross-checked against the sources below):
+
+- **Consensus chain:** `22/80/111/139/443/1024` → Samba 2.2.1a → `trans2open` (CVE-2003-0201) → root directly; proof is `id` plus `cat /var/mail/root` (there is no flag file).
+- **Fingerprinting consensus:** nmap alone shows no Samba version — writeups obtain `2.2.1a` from `smbclient -L` with `-N` (rastating), Metasploit's `auxiliary/scanner/smb/smb_version` (Lachowicz) or `nmblookup -A`; all agree on **2.2.1a**.
+- **Common pitfall:** the module's default Meterpreter payload opens sessions that immediately die — switch to the non-staged `linux/x86/shell_reverse_tcp` for a stable shell (the staged/stage distinction is explained in Part A.5).
+- **Common pitfall:** the return-address brute force may open **several** shell sessions; the stale ones die — use the newest.
+- **Common pitfall:** this 2002-era stack crashes under aggressive scanning — snapshot the VM and prefer `-T3`.
+- **Alternative route:** OpenFuck (mod_ssl CVE-2002-0082, EDB-764/47080) at `0x6b`/`0x6a` usually returns a shell as `apache` (uid 48); its built-in `ptrace-kmod.c` download is dead, so fetch EDB-3 and compile it yourself (patch `linux/user.h` → `sys/user.h`). rastating's transcript shows `Host not found`; other writeups report the mirror `dl.packetstormsecurity.net` still answering — treat it as unreliable and verify with `id`.
+- **Alternative route:** fully manual Samba path — `searchsploit -m multiple/remote/10.c`, then `./10 -b 0 <target>` (EDB-10 bind-shells you on **port 45295**; `-b 0` = Linux bruteforce — from the exploit's own usage text).
+- **Compile-friction consensus:** `764.c` needs `libssl-dev` (missing header error), and on newer Kali some writers also need `libssl1.0-dev` plus the "Updating OpenFuck" patch, or the maintained **OpenLuck** fork — all report the same end state: shell as `apache`, then ptrace.
+- ⚠️ **Verification note (exploit IDs):** every `trans2open` exploit carries **CVE-2003-0201** — confirmed on [EDB-7](https://www.exploit-db.com/exploits/7) (H D Moore's `trans2root.pl`, reverse shell) *and* [EDB-10](https://www.exploit-db.com/exploits/10) (eSDee, bind shell) — while writeups variously cite `10.c`, `22.c`, `7` or `22468`–`22471` for the "same" bug. OpenFuck is **CVE-2002-0082** in both of its Exploit-DB versions: [EDB-764](https://www.exploit-db.com/exploits/764) ("(1)") and [EDB-47080](https://www.exploit-db.com/exploits/47080) ("(2)"). Match on **CVE + version range + EDB-ID**, never on the searchsploit path alone.
+- ⚠️ **Verification note (searchsploit paths):** the path for EDB-10 appears as `multiple/remote/10.c`, `linux/remote/10.c` and `unix/remote/10.c` in different Exploit-DB archive generations — all three names point at the same file. Use `searchsploit -p <EDB-ID>` to find yours, or mirror directly with `-m <EDB-ID>`.
+- ⚠️ **Verification note (impostor writeups):** search results labelled "Kioptrix Level 1" occasionally describe a *different* machine (Apache 2.0.52 on CentOS, MySQL, a login form with SQL injection). This VM's confirmed stack is the Red Hat 7.2 / Apache 1.3.20 / Samba 2.2.1a one in the table above — if a writeup shows a login page or MySQL, it is not this box.
+- **Verified sources:** [rastating](https://rastating.github.io/kioptrix-level-1-ctf-walkthrough/) (the current live replacement for older dead writeup links) · [7h3rAm (GitHub)](https://github.com/7h3rAm/writeups/blob/master/vulnhub.kioptrix1/writeup.md) · [Marcin Lachowicz](https://mlachowicz.github.io/Kioptrix-1) · [EDB-764](https://www.exploit-db.com/exploits/764) · [EDB-10](https://www.exploit-db.com/exploits/10) · [EDB-7](https://www.exploit-db.com/exploits/7) · [VulnHub entry (release metadata + walkthrough index)](https://vulnhub.com/entry/kioptrix-level-1-1,22/)
+
 
 ## 8. Screenshot checklist
 

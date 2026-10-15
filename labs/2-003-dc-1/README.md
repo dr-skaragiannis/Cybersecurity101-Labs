@@ -15,6 +15,9 @@
 | **Attacker** | Kali Linux (attacker 192.168.56.10, target 192.168.56.101) |
 | **Target OS** | Linux — Debian 7 32-bit (kernel 3.2), Apache 2.2.22 + Drupal 7 |
 
+> ?? **Learning Path 1 ? Machine 3 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/03-dc-1.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/03-dc-1.md)** ? Previous in path: [Machine 2 ? CyberSploit: 1](../2-002-cybersploit-1/README.md) ? Next in path: [Machine 4 ? DC: 2](../2-004-dc-2/README.md)
+
 > **Note:** exact banners, ports and file contents can differ slightly between the
 > VirtualBox and VMware builds of this box ("varies by build"). The attack *chain*
 > below is stable; small details (a service version, a directory listing) may move
@@ -850,6 +853,17 @@ Well done. ... Hopefully you've enjoyed this and learned some new skills.
   - [svesec/vulnhub-dc1 (GitHub)](https://github.com/svesec/vulnhub-dc1)
   - [Vulnhub DC-1 Walkthrough — Bazil Brohi (Medium)](https://mob1us86.medium.com/vulnhub-dc-1-walkthrough-939303a5b70a)
   - [DC-1: Vulnhub Walkthrough — Chikleet (Medium)](https://medium.com/@chikleet25/dc-1-vulnhub-walkthrough-878c94996a18)
+
+
+### Community notes — consensus, pitfalls and alternative routes
+
+- ⚠️ **Verification note — final flag:** writeups differ; some print *"It was a dark and stormy night…"* — that is **not** DC-1's final flag (it belongs to another machine's writeup). DC-1's real final flag is *"Well done!!!! / Hopefully you've enjoyed this…"* ending `Twitter - @DCAU7` (confirmed in the official lab README + multiple writeups).
+- ⚠️ **Verification note — placeholder hash:** the `password` value seen in some screenshots is a **placeholder**, not the real `$S$` hash in `users.pass`.
+- ⚠️ **Verification note — account name:** it is `Fred` (capital F) — `fred`/`FRED` fail.
+- ⚠️ **Verification note — EDB titles:** EDB-34992's real title is *"Drupal 7.0 < 7.31 - 'Drupalgeddon' SQL Injection (Add Admin User)"* (`34992.py`, CVE-2014-3704). The Drupalgeddon**2** entries (EDB 44448/44449, CVE-2018-7600) are a **different** bug — older notes conflate them.
+- ⚠️ **Verification note — rebuilds:** Denham and ziomsec cover the **OffSec Proving Grounds / rebuild** of DC-1 with **2 flags**; VulnHub's original has **5**. Flag counts and file paths in those writeups may not match this card.
+- ⚠️ **Verification note — stray port:** a high `status (RPC #100024)` port in some scans is build/NAT-dependent noise; absent on your box ≠ wrong.
+- Consensus pitfalls: Metasploit session flakiness (→ Route B), `python3` missing, `LHOST` set to `127.0.0.1`, unescaped `\$` in hash updates, stopping at `flag4`.
 
 ---
 

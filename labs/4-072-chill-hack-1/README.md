@@ -1958,7 +1958,7 @@ john --wordlist=/usr/share/wordlists/rockyou.txt shadow.txt
    and `.helpline.sh`:
    ```php
    // WRONG
-   system($_POST['cmd']);
+   system(/* bad: unsanitised input */ $_POST['cmd']);
 
    // RIGHT — no shell is involved, so no metacharacter is special
    $allowed = ['status' => ['/usr/local/bin/status'], 'restart' => ['/bin/systemctl','restart','apache2']];

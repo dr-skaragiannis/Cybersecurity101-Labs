@@ -24,9 +24,10 @@ never use a bind shell, how `sudo -l` is meant to be read. Every box links to
 >
 > **[Learning Path 1 — Introduction to Cybersecurity](Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md)** is a complete,
 > ordered beginner curriculum: **13 hand-picked machines** (the easiest rated labs in
-> the repository, difficulty bands 2 and 3 only), **6 theory-and-practice modules**,
+> the repository, difficulty bands 2 and 3 only), **12 theory-and-practice modules (`00–11`)**
+> (7 offensive core modules `00–06` plus 5 systems & defence modules `07–11`),
 > and a **lesson card per machine** with learning objectives, pre-lab questions, a
-> five-rung hints ladder, review questions and a defensive fix table. It was chosen by
+> five-rung hints ladder, review questions, community writeup notes and a defensive fix table. It was chosen by
 > reading every candidate writeup, so the 13 boxes between them cover **30+ distinct
 > attack classes** — from anonymous FTP and default credentials through SQL injection,
 > LFI, SMTP log poisoning and file-upload bypasses, to SUID abuse, `PATH` hijacking,
@@ -45,6 +46,23 @@ never use a bind shell, how `sudo -l` is meant to be read. Every box links to
 > This repository indexes **all 708 VulnHub virtual machines** in
 > [`docs/CATALOG.md`](docs/CATALOG.md). Full walkthroughs are being added
 > machine-by-machine into [`labs/`](labs/).
+
+> ### 🩺 On Windows? Read this first.
+>
+> Antivirus software flags the **educational** reverse-shell payloads inside a few
+> walkthroughs and **deletes those files**, so they appear to be missing from your
+> clone. It is a false positive. The fix (a one-time folder exclusion) and the
+> rest of the repository audit are in
+> **[`docs/AUDIT.md`](docs/AUDIT.md)** (English) /
+> **[`docs/ΑΝΑΘΕΩΡΗΣΗ.md`](docs/ΑΝΑΘΕΩΡΗΣΗ.md)** (Ελληνικά), and in
+> [`docs/LAB-SETUP.md` §10](docs/LAB-SETUP.md#10-windows--antivirus--keep-your-lab-files-from-being-deleted).
+
+> ### 🧭 Not sure where to start?
+>
+> **[`docs/INDEX.md`](docs/INDEX.md)** (English) / **[`docs/ΕΥΡΕΤΗΡΙΟ.md`](docs/ΕΥΡΕΤΗΡΙΟ.md)**
+> (Ελληνικά) puts **everything** — setup, the fundamentals primer, both curriculum
+> editions, the theory modules, the 13 machines and the full catalog — into a single
+> logical reading order.
 
 ---
 
@@ -67,28 +85,34 @@ Use these skills responsibly.
 ```text
 Cybersecurity101-Labs/
 ├── README.md               ← you are here
-├── TEMPLATE.md             ← the standard writeup template
+├── TEMPLATE.md             ← the standard lab-walkthrough template
+├── TEMPLATE-card.md        ← the machine-card (lesson) template — method-first A–H
 ├── Learning Path 1 - Introduction to Cybersecurity/
 │   ├── README.md           ← ★ the beginner curriculum — 13 ordered machines
-│   ├── 00-Before-You-Start.md … 06-Shells-Persistence-and-Escapes.md
-│   │                       ← theory + practice modules
-│   │   └── Machines/           ← one lesson card per machine (hints ladder inside)
+│   ├── 00-Before-You-Start.md … 11-Malware-Analysis-and-YARA.md
+│   │                       ← 12 theory + practice modules (00–06 offence, 07–11 systems/defence)
+│   └── Machines/           ← one lesson card per machine (A–H structure + hints ladder)
 ├── Μαθησιακή Διαδρομή 1 - Εισαγωγή στην Κυβερνοασφάλεια/
 │   ├── README.md           ← ★ το ίδιο μάθημα, ολοκληρωμένο στα Ελληνικά
-│   ├── 00-Πριν-Ξεκινήσεις.md … 06-Κελύφη-Εμμονή-και-Διαφυγές.md
-│   └── Μηχανές/            ← μία κάρτα μαθήματος ανά μηχάνημα
+│   ├── 00-Πριν-Ξεκινήσεις.md … 11-Ανάλυση-Κακόβουλου-Λογισμικού-και-YARA.md
+│   └── Μηχανές/            ← μία κάρτα μαθήματος ανά μηχάνημα (Μέρη Α–Η)
 ├── docs/
 │   ├── CONCEPTS.md         ← ★ the fundamentals primer — read this first
 │   ├── CATALOG.md          ← index of ALL 708 VulnHub VMs
 │   ├── PROGRESS.md         ← live list of finished walkthroughs
 │   ├── LAB-SETUP.md        ← build your own lab (step by step)
 │   ├── BEGINNER-PATH.md    ← suggested order for newcomers
-│   └── TOOLS.md            ← the toolkit and what each tool does
+│   ├── TOOLS.md            ← the toolkit and what each tool does
+│   ├── AUDIT.md            ← repository audit + antivirus fix (English)
+│   ├── ΑΝΑΘΕΩΡΗΣΗ.md        ← ο ίδιος απολογισμός στα Ελληνικά
+│   ├── INDEX.md            ← ★ the whole repository in reading order (English)
+│   └── ΕΥΡΕΤΗΡΙΟ.md         ← ★ όλο το αποθετήριο σε σειρά ανάγνωσης (Ελληνικά)
 ├── labs/
 │   └── <band>-<rank>-<slug>/
 │       ├── README.md       ← the walkthrough for that VM
 │       └── images/         ← your screenshots for that VM
-└── catalog/
+└── catalog/                ← raw VulnHub data (see catalog/README.md)
+    ├── README.md           ← what this folder is, and the encoding caveats
     ├── master-catalog.csv  ← machine-readable catalog
     └── catalog.json        ← slug/URL/metadata map
 ```
@@ -104,7 +128,7 @@ The [`Learning Path 1 - Introduction to Cybersecurity/`](Learning%20Path%201%20-
 course and adds the theory around them, so no lab folder is duplicated.
 
 [`Μαθησιακή Διαδρομή 1 - Εισαγωγή στην Κυβερνοασφάλεια/`](%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md) is the **complete
-Greek edition** of that same curriculum: the same 13 machines, the same six theory modules and
+Greek edition** of that same curriculum: the same 13 machines, the same twelve theory modules (`00–11`) and
 the same thirteen lesson cards, rewritten in Greek. Commands, tool names, flags, file paths and
 real terminal output stay in English, because that is how they appear on any real system; every
 explanation, concept box, question, hint rung and defensive note is in Greek. The English folder
@@ -333,6 +357,13 @@ Hacking Articles) is underway — these four are done:
 3. Put screenshots in `labs/<vm-slug>/images/` and reference them relatively.
 4. Link the community writeups you used in the **References** section.
 5. Keep commands copy/paste-able and outputs accurate.
+
+**Adding a Learning-Path machine card?** Use [`TEMPLATE-card.md`](TEMPLATE-card.md) — the
+method-first A–H structure used by every card in
+[Learning Path 1](Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) and its
+[Greek mirror](%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md).
+Keep the two language editions structurally identical. Before committing, run
+`python3 scripts/validate.py` and `python3 scripts/audit_all.py`.
 
 ---
 

@@ -174,6 +174,10 @@ PORT   STATE SERVICE VERSION
 Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 ```
 
+> **How to read it:** `22/tcp` is SSH and `80/tcp` is nginx. `open` means the service answered;
+> the **version string** is what you take to `searchsploit`, and `Service Info: OS: Linux`
+> confirms the platform. Every open port is an attack surface — note them all before moving on.
+
 Two services: SSH on 22 and a web server on 80. (Exact versions vary by build.)
 
 ![Full nmap scan of DC-4](images/02-nmap.png)

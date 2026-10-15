@@ -15,6 +15,9 @@
 | **VulnHub Entry** | [Open on VulnHub](https://vulnhub.com/entry/mr-robot-1,151/) |
 | **Download** | [Download OVA](https://vulnhub.com/entry/mr-robot-1,151/#download) |
 
+> ?? **Learning Path 1 ? Machine 7 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/07-mr-robot-1.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/07-mr-robot-1.md)** ? Previous in path: [Machine 6 ? bossplayersCTF: 1](../3-016-bossplayersctf-1/README.md) ? Next in path: [Machine 8 ? Empire: Breakout](../3-028-empire-breakout/README.md)
+
 Throughout this walkthrough the target is always `192.168.56.101` and the attacker (Kali) is `192.168.56.100`. Substitute your own values.
 
 ---
@@ -848,6 +851,20 @@ All three keys captured. Machine rooted.
 - Bradley Thornton — "Mr-Robot 1 Walkthrough" — https://thor-sec.com/walkthroughs/mrrobot1/
 - GTFOBins — nmap — https://gtfobins.github.io/gtfobins/nmap/
 - pentestmonkey PHP reverse shell — https://github.com/pentestmonkey/php-reverse-shell
+
+
+### Community notes — consensus, pitfalls and alternative routes (cross-checked against the sources below):
+
+- **Consensus chain:** `80/443` (22 closed) → `robots.txt` (key 1 + published wordlist) → de-dupe `fsocity.dic` → WordPress username oracle (`wpscan -e u`, `/?author=1`, or the "Invalid username" vs "is incorrect" message) → `elliot:ER28-0652` → Appearance→Editor→`404.php` PHP reverse shell → `daemon` → MD5 crack → `su robot` → SUID `nmap --interactive` `!sh` → root key.
+- **Common pitfall:** `su robot` dies with "must be run from a terminal" until you `python -c 'import pty; pty.spawn("/bin/bash")'` — the TTY upgrade is mandatory here (the pitfall is even visible in the comment sections of the writeups below).
+- **Common pitfall:** attacking the 858,160-line list without `sort -u` is ~75× slower; and the themed homepage is a dead end — go straight to `robots.txt`.
+- **Common pitfall:** firing the reverse shell before the listener is up consumes the one-shot payload — `nc -lvnp` first, trigger second.
+- **Alternative route:** the credentials are also leaked on `/license` (a.k.a. `/license.txt`) as base64 `ZWxsaW90OkVSMjgtMDY1Mgo=` → `elliot:ER28-0652`, skipping the brute force entirely (Thor-Sec found it with `dirb`, Jack Halon with `nikto`).
+- **Alternative route:** older writeups pop the shell with Metasploit `exploit/unix/webapp/wp_admin_shell_upload` instead of the Theme Editor; the frequent abort "The target does not appear to be using WordPress" is countered with the right `TARGETURI`, `set WPCHECK false`, or editing the module (Jack Halon's route). Hash-cracking alternates used: `hashcat -m 0`, CrackStation, HashKiller.
+- **Dead ends reported by writeups:** a second WordPress account found in the database (`mich05654` / `Dylan_2791`, christophetd) grants nothing extra; from *inside* the box `nmap localhost` also shows FTP `21` and MySQL `3306`, but they are loopback-only (invisible to your external scan) and lead nowhere without credentials.
+- ⚠️ **Verification note (port 22):** our full lab writeup's sample scan shows `22/tcp open ssh (OpenSSH 8.2p1)`, while the community writeups fetched for this card (christophetd, Jack Halon, Thor-Sec, priest716) all show `22/tcp closed ssh`. The card keeps **closed**; either way **no writeup ever logs in over SSH**, so treat it as a non-route.
+- ⚠️ **Verification note (WordPress version):** writeups disagree — `4.3.9` (christophetd, via `/readme.html`), `4.3.6` (Jack Halon's `/readme.html` and our lab's wpscan), `4.3.4` (Jack Halon's wpscan fingerprint), `4.3.1` (4pfsec). The card therefore states **no version**; the disagreement itself is the lesson — version detection is an estimate, cross-check it.
+- **Verified sources:** [christophetd](https://blog.christophetd.fr/write-up-mr-robot/) · [Thor-Sec](https://thor-sec.com/walkthroughs/mrrobot1/) · [4pfsec](https://4pfsec.com/mr-robot-1-vulnhub) · [Jack Halon](https://jhalon.github.io/vulnhub-mr-robot1/)
 
 ---
 

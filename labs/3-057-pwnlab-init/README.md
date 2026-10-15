@@ -11,6 +11,9 @@
 | **Attacker** | Kali Linux (attacker IP `192.168.56.10`, target IP `192.168.56.101`) |
 | **Target OS** | Linux (Debian) |
 
+> ?? **Learning Path 1 ? Machine 10 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/10-pwnlab-init.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/10-pwnlab-init.md)** ? Previous in path: [Machine 9 ? CengBox: 1](../3-018-cengbox-1/README.md) ? Next in path: [Machine 11 ? Photographer: 1](../3-055-photographer-1/README.md)
+
 > **Goal:** get `root` and read the flag in `/root/flag.txt`.
 > **Note on IPs:** the target IP varies by build. This guide uses `192.168.56.101` as the example target and `192.168.56.10` as the example attacker. Replace both with the addresses you actually discover.
 
@@ -737,6 +740,24 @@ Real community writeups consulted during research (same path):
 - [CTF: PwnLab Init Walkthrough — mrjamiebowman](https://www.mrjamiebowman.com/pentest/parrotos/pwnlab-init-walkthrough/)
 - [Vulnhub – PwnLab init — Ivan's IT learning blog](https://ivanitlearning.wordpress.com/2020/02/06/vulnhub-pwnlab-init/)
 - [VulnHub Official Entry — PwnLab: init](https://vulnhub.com/entry/pwnlab-init,158/)
+
+### Community notes — consensus, pitfalls and alternative routes
+
+*(cross-checked against the sources below):*
+
+- **Consensus chain:** LFI at `?page=` → `php://filter/convert.base64-encode/resource=config` → MySQL root `H4u%QJ_H99` on 3306 → dump `Users.users` → base64-decode → login → read `upload.php` via the filter → `GIF89a` polyglot `.gif` → execute via the `lang` cookie → `su kane` → `msgmike` PATH hijack → `mike` → `msg2root` command injection → root. All seven writeups cross-checked follow this chain; **none** needed Apache log poisoning (the `lang` cookie is a cleaner execution primitive than `access.log`).
+- **Common pitfall:** the cookie must be `lang=../upload/<md5>.gif` — without `../` nothing executes; the GET `page` inclusion appends `.php`, so the `.gif` only ever fires through the cookie. Visiting the uploaded file directly only *downloads* it (static `.gif`, no PHP handler).
+- **Common pitfall:** `su` fails with "must be run from a terminal" until you spawn a TTY (`python -c 'import pty; pty.spawn("/bin/bash")'` — `python`, not `python3`, on this box).
+- **Common pitfall:** `export PATH=/home/kane` *replaces* PATH, so `cat`/`ls` disappear — prepend with `:$PATH` instead, and restore the full PATH afterwards; `;/bin/sh` works in `msg2root` where `bash -p` may not.
+- **Common pitfall:** forget `chmod +x cat` and the shell silently skips your fake `cat` and falls back to the real one — you stay `kane` with no error message.
+- **Alternative route:** the upload check only needs a real image MIME plus the magic header, so a `.png`/`.jpg` name works too (abatchy and CyberArri both uploaded a `GIF89a`-prefixed payload with a `.png` name and included it via the cookie); editing the cookie in Burp's proxy works wherever `curl -b` is awkward (reedphish, flikk, CyberArri).
+- **Alternative route:** `msg2root` can be abused beyond `;/bin/sh` — flikk injected commands to `chown root` + `chmod u+s` a tiny compiled `setuid(0)` helper and ran that instead; abatchy used `opensesame; bash -p`.
+- **Alternative route:** reversing `msgmike`/`msg2root` with **radare2** or **IDA** instead of `strings` (IRONHACKERS) — same conclusion, more tooling than a beginner needs.
+- **Dead ends confirmed by multiple writeups:** SQLi on `login.php` (prepared statements — sqlmap reports nothing injectable); `kent`'s account (nothing interesting); `mike`'s DB password locally (does not work); an extra `john` account in `/home` (red herring); SSH (disabled); linpeas (no useful findings).
+- **⚠️ Verification note:** the DB password strings differ between image revisions. This card keeps the values observed on the current lab image (`S0k3an1jZmFuc2tp`, `U2Ztb2RvbnM=`, `a2FuZQ==`); most writeups from 2016–2022 report `kent=Sld6WHVCSkpOeQ==`, `mike=U0lmZHNURW42SQ==`, `kane=aVN2NVltMkdSbw==` (→ `JWzXuBJJNy`, `SIfdsTEn6I`, `iSv5Ym2GRo`). The pattern — three users, base64 passwords — never changes.
+- **⚠️ Verification note:** the card's port set (80, 111, 3306) is the operative one, but several scans in writeups also show one or two **extra high-numbered RPC `status` ports** (e.g. 49623, 58877, 60324) served by `rpcbind` on port 111. They are informational — no step of the chain needs them. Metadata (author Claor, released 1 Aug 2016, flag `/root/flag.txt`, OS Debian) is confirmed verbatim on the VulnHub entry.
+- **Verified sources:** [abatchy](https://www.abatchy.com/2016/11/pwnlab-init-walkthrough-vulnhub) · [joenibe](https://joenibe.github.io/vulnhub/pwnlab/) · [IRONHACKERS](https://ironhackers.es/en/pwnlab-init-writeup-vulnhub/) · [reedphish](https://reedphish.wordpress.com/2016/09/17/pwnlab-init-walkthrough/) · [VulnHub entry](https://www.vulnhub.com/entry/pwnlab-init,158/) · [HackTricks — File Inclusion](https://book.hacktricks.xyz/pentesting-web/file-inclusion) · [CyberArri](https://cyberarri.com/2022/07/28/pwnlab-init/) · [flikk.blog](https://flikk.blog/2020/01/30/vulnhub-pwnlab-init/)
+
 
 ## 8. Screenshot checklist
 

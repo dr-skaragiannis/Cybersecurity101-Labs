@@ -14,6 +14,9 @@
 | **Target OS** | Ubuntu 14.04 LTS — Apache 2.4.7, OpenSSH 6.6.1p1, kernel **3.13.0-32-generic** |
 | **Flags** | **Three** — flag1 (web), flag2 (user home), finalflag (root) |
 
+> ?? **Learning Path 1 ? Machine 2 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/02-cybersploit-1.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/02-cybersploit-1.md)** ? Previous in path: [Machine 1 ? Basic Pentesting: 1](../2-001-basic-pentesting-1/README.md) ? Next in path: [Machine 3 ? DC: 1](../2-003-dc-1/README.md)
+
 > **Author's stated learning goals:** *"FROM THIS VMs YOU WILL LEARN ABOUT
 > **ENCODER-DECODER** & **EXPLOIT-DB**."*
 >
@@ -1693,6 +1696,16 @@ database, no filters to bypass, no rabbit holes. The difficulty is entirely in
   - [OverlayFS kernel documentation](https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt)
   - [`gcc(1)` options](https://gcc.gnu.org/onlinedocs/gcc/Option-Summary.html) · [`base64(1)`](https://man7.org/linux/man-pages/man1/base64.1.html) · [`xxd(1)`](https://linux.die.net/man/1/xxd)
   - [GTFOBins](https://gtfobins.github.io) · [LinPEAS](https://github.com/carlospolop/PEASS-ng/tree/master/linPEAS)
+
+
+### Community notes — consensus, pitfalls and alternative routes
+
+- ⚠️ **Verification note — two different images are circulating.** Multiple independent writeups (j.info, NEOSPLOIT, Infosec Articles) report the published VM's own banners as **Apache 2.2.22** and **OpenSSH 5.9p1** with the homepage title **"Hello Pentester!"**, while this card's metadata table lists Apache 2.4.7 / OpenSSH 6.6.1p1. Both sets are kept here on purpose: **the service versions you actually see on your VM decide which libc offsets are correct — always trust your own `nmap` output over any writeup, including this card's table.** The recon and privesc *path* is identical either way.
+- ⚠️ **Verification note — the `flag2.txt` comments vary between VM images.** Some writeups (e.g. Infosec Institute) report the decoded comments as `good work !` followed by `Flag2: cybersploit{https:t.me/cybersploit1}`; the image used for this card decodes to `good work !` followed by `flag2:cybersploit{https:t.me/cybersploit1}`. The flag *string* agrees; only the comment capitalisation and spacing differ. Don't let a writeup's exact casing confuse you when your own decode disagrees.
+- **Consensus on the route:** every cross-checked writeup agrees on the kill chain: `robots.txt` → base64 → **flag 1 = the SSH password** → login as `itsskv` → `flag2.txt` (binary) → `uname -a` → searchsploit → **EDB 37292** → root. (An earlier version of this card described a detour through a `cmd.php` webshell and a reverse shell; it is unnecessary — the flag itself is the credential the box wants you to use.) Alternative *choices* reported by different authors: the **`python -c 'import pty;pty.spawn("/bin/bash")'`** shell upgrade before running the exploit (more reliable job control), and compiling the exploit **on the attacker machine** (`gcc -m32`) when the target lacks build tooling.
+- **Pitfalls seen across writeups:** wrapping `flag2.txt`'s long base64/binary lines when pasting them into a file (breaks the grouping); `Permission denied` on `./ofs` (run `chmod +x ofs`); forgetting the trailing newline after `base64 -d` so the prompt glues onto the output; and re-running the overlayfs exploit without cleaning up — **a leftover `/etc/ld.so.preload` or a world-writable `/etc/passwd` (`chmod 644 /etc/passwd` to revert) can leave the VM broken for next time.**
+- **Two corrections worth noting** (these applied to earlier versions of this card): (1) the `robots.txt` Base64 decodes with **newlines** — `base64 -d` (or `-D` on macOS) is required; `echo … | base64` only *encodes*; (2) `ls -la flag2.txt` reports **1036 bytes** in the lab image — earlier card revisions claimed 224, which was wrong.
+- **Verified sources:** j.info (`<https://j.info/linux/writeup/2018/10/12/cybersploit-1.html>`), NEOSPLOIT (`<https://neosploit.github.io/machines/cybersploit1.html>`), Infosec Articles (`<https://infosecarticles.com/cybersploit-1.html>`), Exploit-DB 37292 (`<https://www.exploit-db.com/exploits/37292>`).
 
 ---
 

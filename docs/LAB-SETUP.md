@@ -139,4 +139,63 @@ Before attacking, in VirtualBox: select the VM → **Snapshots → Take**. Name 
 
 ---
 
+## 10. Windows / antivirus — keep your lab files from being deleted
+
+> ⚠️ **Read this if you are on Windows.** Several walkthroughs contain *educational*
+> reverse-shell payloads (PHP, Python, Bash). To Windows Defender — and to most
+> endpoint-protection products — those lines look exactly like a real backdoor. The
+> scanner cannot tell that the file is a Markdown tutorial, so it **deletes
+> ("quarantines") the walkthrough** a few minutes after it appears.
+
+This is a **false positive**: the payloads are inert text inside a document, not a
+running program. It is also the single most common reason a learner reports
+*"some walkthroughs are missing from my clone"*.
+
+### The fix (do it once)
+
+Exclude the repository folder from real-time scanning. Run **PowerShell as
+Administrator** and adjust the path to where you cloned the repo:
+
+```powershell
+Add-MpPreference -ExclusionPath "C:\path\to\Cybersecurity101-Labs"
+```
+
+Verify it was added:
+
+```powershell
+(Get-MpPreference).ExclusionPath
+```
+
+Graphical equivalent: **Windows Security → Virus & threat protection → Manage
+settings → Exclusions → Add an exclusion → Folder**, then select the
+`Cybersecurity101-Labs` folder.
+
+> **Why this is safe here.** You are excluding one folder that holds only text,
+> Markdown, OVA download links and your own screenshots. Nothing in it is executed.
+> Never exclude `C:\`, your whole `Downloads` folder, or a browser profile — that
+> *would* be dangerous.
+
+### After you add the exclusion
+
+If files were already removed, restore them from git:
+
+```bash
+git -C Cybersecurity101-Labs status            # shows the deleted files
+git -C Cybersecurity101-Labs checkout -- .      # restore everything tracked
+```
+
+> **Defence in depth tip.** Because these files are tracked by git, *nothing is ever
+> truly lost* — even when antivirus deletes them, `git checkout -- .` brings them
+> back byte-for-byte. That is a lesson in itself: **version control is a recovery
+> tool, not just a collaboration tool.**
+
+### If you cannot get administrator rights
+
+- Use **WSL2** (Ubuntu) and clone the repository there; Defenders's Windows
+  real-time protection does not scan inside the WSL filesystem the same way.
+- Or work on Linux/macOS for this repository.
+- Report it as a false positive to your AV vendor (optional, for completeness).
+
+---
+
 _Next: [The toolkit](TOOLS.md) · [Beginner path](BEGINNER-PATH.md) · [Catalog](CATALOG.md)._

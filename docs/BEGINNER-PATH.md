@@ -13,10 +13,11 @@ contiguous. See the [difficulty scale](../README.md#difficulty-scale).
 >
 > **[Learning Path 1 — Introduction to Cybersecurity](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md)** turns the
 > beginner end of this page into a taught curriculum: **13 machines** in a fixed
-> order, **6 theory-and-practice modules** (networking and recon, web attacks, service
+> order, **12 theory-and-practice modules (`00–11`)** (networking and recon, web attacks, service
 > and network attacks, credentials and cracking, Linux privilege escalation, shells
-> and escapes), and a **lesson card per machine** with objectives, pre-lab questions,
-> a five-rung hints ladder, review questions and a defensive fix table. The four tiers
+> and escapes, plus permissions/MAC, PAM, cryptography/GPG, firewalls/sandboxing and
+> malware/YARA), and a **lesson card per machine** with objectives, pre-lab questions,
+> a five-rung hints ladder, review questions, community writeup notes and a defensive fix table. The four tiers
 > below remain useful as a wider menu once you have finished it.
 >
 > **Μιλάς Ελληνικά;** Ολόκληρη η διαδρομή υπάρχει και στα Ελληνικά:
@@ -29,6 +30,28 @@ contiguous. See the [difficulty scale](../README.md#difficulty-scale).
 
 ---
 
+## ★ Tier 0 — Learning Path 1 (the 13-machine ordered course)
+
+If this is your first time, work through these **13 machines in order**, reading each machine's **Lesson Card** (theory, pre-lab questions, 5-rung hints ladder) before opening the full lab walkthrough:
+
+| Step | Rank | Machine | Lesson Card (EN / GR) | Full Walkthrough |
+|---:|---:|---|---|---|
+| **1** | **001** | **Basic Pentesting: 1** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/01-basic-pentesting-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/01-basic-pentesting-1.md) | [`labs/2-001-basic-pentesting-1/`](../labs/2-001-basic-pentesting-1/README.md) |
+| **2** | **002** | **CyberSploit: 1** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/02-cybersploit-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/02-cybersploit-1.md) | [`labs/2-002-cybersploit-1/`](../labs/2-002-cybersploit-1/README.md) |
+| **3** | **003** | **DC: 1** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/03-dc-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/03-dc-1.md) | [`labs/2-003-dc-1/`](../labs/2-003-dc-1/README.md) |
+| **4** | **004** | **DC: 2** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/04-dc-2.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/04-dc-2.md) | [`labs/2-004-dc-2/`](../labs/2-004-dc-2/README.md) |
+| **5** | **046** | **Kioptrix: Level 1 (#1)** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/05-kioptrix-level-1-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/05-kioptrix-level-1-1.md) | [`labs/3-046-kioptrix-level-1-1/`](../labs/3-046-kioptrix-level-1-1/README.md) |
+| **6** | **016** | **bossplayersCTF: 1** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/06-bossplayersctf-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/06-bossplayersctf-1.md) | [`labs/3-016-bossplayersctf-1/`](../labs/3-016-bossplayersctf-1/README.md) |
+| **7** | **053** | **Mr-Robot: 1** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/07-mr-robot-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/07-mr-robot-1.md) | [`labs/3-053-mr-robot-1/`](../labs/3-053-mr-robot-1/README.md) |
+| **8** | **028** | **Empire: Breakout** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/08-empire-breakout.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/08-empire-breakout.md) | [`labs/3-028-empire-breakout/`](../labs/3-028-empire-breakout/README.md) |
+| **9** | **018** | **CengBox: 1** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/09-cengbox-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/09-cengbox-1.md) | [`labs/3-018-cengbox-1/`](../labs/3-018-cengbox-1/README.md) |
+| **10** | **057** | **PwnLab: init** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/10-pwnlab-init.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/10-pwnlab-init.md) | [`labs/3-057-pwnlab-init/`](../labs/3-057-pwnlab-init/README.md) |
+| **11** | **055** | **Photographer: 1** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/11-photographer-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/11-photographer-1.md) | [`labs/3-055-photographer-1/`](../labs/3-055-photographer-1/README.md) |
+| **12** | **062** | **symfonos: 1** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/12-symfonos-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/12-symfonos-1.md) | [`labs/3-062-symfonos-1/`](../labs/3-062-symfonos-1/README.md) |
+| **13** | **040** | **HackInOS: 1** | [EN Card](../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/13-hackinos-1.md) · [GR Κάρτα](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/13-hackinos-1.md) | [`labs/3-040-hackinos-1/`](../labs/3-040-hackinos-1/README.md) |
+
+---
+
 ## Tier 1 — Your first boots (single obvious flaw)
 
 These are the classic "first VM ever" boxes. You will mostly do recognition +
@@ -36,16 +59,16 @@ one exploit.
 
 | Rank | Machine | Difficulty | VulnHub | Local walkthrough |
 |---:|---------|-----------|---------|-------------------|
-| **046** | Kioptrix: Level 1 (#1) | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/kioptrix-level-1-1,22/) | `labs/3-046-kioptrix-level-1-1/` |
-| **047** | Kioptrix: Level 1.1 (#2) | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/kioptrix-level-11-2,23/) | `labs/3-047-kioptrix-level-11-2/` |
-| **048** | Kioptrix: Level 1.2 (#3) | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/kioptrix-level-12-3,24/) | `labs/3-048-kioptrix-level-12-3/` |
-| **049** | Kioptrix: Level 1.3 (#4) | **3 — Easy** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/kioptrix-level-13-4,25/) | `labs/3-049-kioptrix-level-13-4/` |
-| **030** | Fowsniff: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/fowsniff-1,262/) | `labs/3-030-fowsniff-1/` |
-| **052** | LazySysAdmin: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/lazysysadmin-1,205/) | `labs/3-052-lazysysadmin-1/` |
-| **016** | bossplayersCTF: 1 | **3 — Easy** (stated: *Easy / Beginner*) | [link](https://vulnhub.com/entry/bossplayersctf-1,375/) | `labs/3-016-bossplayersctf-1/` |
-| **029** | EVM: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/evm-1,391/) | `labs/3-029-evm-1/` |
-| **066** | Toppo: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/toppo-1,245/) | `labs/3-066-toppo-1/` |
-| **013** | Tr0ll: 1 | **2 — Very Easy** (stated: *Easy / Beginner*) | [link](https://vulnhub.com/entry/tr0ll-1,100/) | `labs/2-013-tr0ll-1/` |
+| **046** | Kioptrix: Level 1 (#1) | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/kioptrix-level-1-1,22/) | [`labs/3-046-kioptrix-level-1-1/`](../labs/3-046-kioptrix-level-1-1/README.md) |
+| **047** | Kioptrix: Level 1.1 (#2) | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/kioptrix-level-11-2,23/) | [`labs/3-047-kioptrix-level-11-2/`](../labs/3-047-kioptrix-level-11-2/README.md) |
+| **048** | Kioptrix: Level 1.2 (#3) | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/kioptrix-level-12-3,24/) | [`labs/3-048-kioptrix-level-12-3/`](../labs/3-048-kioptrix-level-12-3/README.md) |
+| **049** | Kioptrix: Level 1.3 (#4) | **3 — Easy** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/kioptrix-level-13-4,25/) | [`labs/3-049-kioptrix-level-13-4/`](../labs/3-049-kioptrix-level-13-4/README.md) |
+| **030** | Fowsniff: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/fowsniff-1,262/) | [`labs/3-030-fowsniff-1/`](../labs/3-030-fowsniff-1/README.md) |
+| **052** | LazySysAdmin: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/lazysysadmin-1,205/) | [`labs/3-052-lazysysadmin-1/`](../labs/3-052-lazysysadmin-1/README.md) |
+| **016** | bossplayersCTF: 1 | **3 — Easy** (stated: *Easy / Beginner*) | [link](https://vulnhub.com/entry/bossplayersctf-1,375/) | [`labs/3-016-bossplayersctf-1/`](../labs/3-016-bossplayersctf-1/README.md) |
+| **029** | EVM: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/evm-1,391/) | [`labs/3-029-evm-1/`](../labs/3-029-evm-1/README.md) |
+| **066** | Toppo: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/toppo-1,245/) | [`labs/3-066-toppo-1/`](../labs/3-066-toppo-1/README.md) |
+| **013** | Tr0ll: 1 | **2 — Very Easy** (stated: *Easy / Beginner*) | [link](https://vulnhub.com/entry/tr0ll-1,100/) | [`labs/2-013-tr0ll-1/`](../labs/2-013-tr0ll-1/README.md) |
 | **001** | **Basic Pentesting: 1** | **2 — Very Easy** (stated: *Easy / Beginner*) | [link](https://vulnhub.com/entry/basic-pentesting-1,216/) | [`labs/2-001-basic-pentesting-1/`](../labs/2-001-basic-pentesting-1/README.md) |
 | **017** | **Bulldog: 1** | **3 — Easy** (stated: *Beginner / Intermediate*) | [link](https://vulnhub.com/entry/bulldog-1,211/) | [`labs/3-017-bulldog-1/`](../labs/3-017-bulldog-1/README.md) |
 
@@ -55,16 +78,16 @@ You now meet web enumeration, default logins, and simple file uploads.
 
 | Rank | Machine | Difficulty | VulnHub | Local walkthrough |
 |---:|---------|-----------|---------|-------------------|
-| **053** | Mr-Robot: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/mr-robot-1,151/) | `labs/3-053-mr-robot-1/` |
-| **054** | NullByte: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/nullbyte-1,126/) | `labs/3-054-nullbyte-1/` |
-| **057** | PwnLab: init | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/pwnlab-init,158/) | `labs/3-057-pwnlab-init/` |
-| **085** | SickOs: 1.1 | **4 — Medium** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/sickos-11,132/) | `labs/4-085-sickos-11/` |
-| **065** | Tommy Boy: 1 | **3 — Easy** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/tommy-boy-1,157/) | `labs/3-065-tommy-boy-1/` |
-| **019** | Corrosion: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/corrosion-1,730/) | `labs/3-019-corrosion-1/` |
-| **020** | DarkHole: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/darkhole-1,724/) | `labs/3-020-darkhole-1/` |
-| **045** | Jangow: 1.0.1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/jangow-101,754/) | `labs/3-045-jangow-101/` |
-| **041** | hackme: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/hackme-1,330/) | `labs/3-041-hackme-1/` |
-| **042** | hackme: 2 | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/hackme-2,618/) | `labs/3-042-hackme-2/` |
+| **053** | Mr-Robot: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/mr-robot-1,151/) | [`labs/3-053-mr-robot-1/`](../labs/3-053-mr-robot-1/README.md) |
+| **054** | NullByte: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/nullbyte-1,126/) | [`labs/3-054-nullbyte-1/`](../labs/3-054-nullbyte-1/README.md) |
+| **057** | PwnLab: init | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/pwnlab-init,158/) | [`labs/3-057-pwnlab-init/`](../labs/3-057-pwnlab-init/README.md) |
+| **085** | SickOs: 1.1 | **4 — Medium** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/sickos-11,132/) | [`labs/4-085-sickos-11/`](../labs/4-085-sickos-11/README.md) |
+| **065** | Tommy Boy: 1 | **3 — Easy** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/tommy-boy-1,157/) | [`labs/3-065-tommy-boy-1/`](../labs/3-065-tommy-boy-1/README.md) |
+| **019** | Corrosion: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/corrosion-1,730/) | [`labs/3-019-corrosion-1/`](../labs/3-019-corrosion-1/README.md) |
+| **020** | DarkHole: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/darkhole-1,724/) | [`labs/3-020-darkhole-1/`](../labs/3-020-darkhole-1/README.md) |
+| **045** | Jangow: 1.0.1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/jangow-101,754/) | [`labs/3-045-jangow-101/`](../labs/3-045-jangow-101/README.md) |
+| **041** | hackme: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/hackme-1,330/) | [`labs/3-041-hackme-1/`](../labs/3-041-hackme-1/README.md) |
+| **042** | hackme: 2 | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/hackme-2,618/) | [`labs/3-042-hackme-2/`](../labs/3-042-hackme-2/README.md) |
 | **031** | **FristiLeaks: 1.3** | **3 — Easy** (stated: *Easy–Intermediate*) | [link](https://vulnhub.com/entry/fristileaks-13,133/) | [`labs/3-031-fristileaks-13/`](../labs/3-031-fristileaks-13/README.md) |
 | **092** | **zico2: 1** | **4 — Medium** (stated: *Intermediate*) | [link](https://vulnhub.com/entry/zico2-1,210/) | [`labs/4-092-zico2-1/`](../labs/4-092-zico2-1/README.md) |
 | **086** | **SickOs: 1.2** | **4 — Medium** (stated: *Intermediate*) | [link](https://vulnhub.com/entry/sickos-12,144/) | [`labs/4-086-sickos-12/`](../labs/4-086-sickos-12/README.md) |
@@ -77,22 +100,22 @@ Multiple steps, several services, and the start of real privilege escalation.
 
 | Rank | Machine | Difficulty | VulnHub | Local walkthrough |
 |---:|---------|-----------|---------|-------------------|
-| **061** | Stapler: 1 | **3 — Easy** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/stapler-1,150/) | `labs/3-061-stapler-1/` |
-| **056** | Prime: 1 | **3 — Easy** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/prime-1,358/) | `labs/3-056-prime-1/` |
-| **062** | symfonos: 1 | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/symfonos-1,322/) | `labs/3-062-symfonos-1/` |
-| **059** | Raven: 1 | **3 — Easy** (stated: *Beginner / Intermediate*) | [link](https://vulnhub.com/entry/raven-1,256/) | `labs/3-059-raven-1/` |
-| **081** | GoldenEye: 1 | **4 — Medium** (stated: *Intermediate*) | [link](https://vulnhub.com/entry/goldeneye-1,240/) | `labs/4-081-goldeneye-1/` |
-| **084** | Matrix: 1 | **4 — Medium** (stated: *Intermediate*) | [link](https://vulnhub.com/entry/matrix-1,259/) | `labs/4-084-matrix-1/` |
-| **069** | Web Developer: 1 | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/web-developer-1,288/) | `labs/3-069-web-developer-1/` |
-| **058** | pyexp: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/pyexp-1,534/) | `labs/3-058-pyexp-1/` |
-| **038** | Funbox: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/funbox-1,518/) | `labs/3-038-funbox-1/` |
-| **008** | Funbox: Scriptkiddie | **2 — Very Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/funbox-scriptkiddie,725/) | `labs/2-008-funbox-scriptkiddie/` |
-| **010** | NoobBox: 1 | **2 — Very Easy** (stated: *Beginner*) | [link](https://vulnhub.com/entry/noobbox-1,664/) | `labs/2-010-noobbox-1/` |
-| **015** | BlueSky: 1 | **3 — Easy** (stated: *Beginner / Easy*) | [link](https://vulnhub.com/entry/bluesky-1,623/) | `labs/3-015-bluesky-1/` |
-| **060** | serial: 1 | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/serial-1,349/) | `labs/3-060-serial-1/` |
-| **078** | digitalworld.local: JOY | **4 — Medium** (stated: *Medium*) | [link](https://vulnhub.com/entry/digitalworldlocal-joy,298/) | `labs/4-078-digitalworldlocal-joy/` |
-| **024** | digitalworld.local: BRAVERY | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/digitalworldlocal-bravery,281/) | `labs/3-024-digitalworldlocal-bravery/` |
-| **043** | hackNos: Os-hackNos | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/hacknos-os-hacknos,401/) | `labs/3-043-hacknos-os-hacknos/` |
+| **061** | Stapler: 1 | **3 — Easy** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/stapler-1,150/) | [`labs/3-061-stapler-1/`](../labs/3-061-stapler-1/README.md) |
+| **056** | Prime: 1 | **3 — Easy** (stated: *Easy / Intermediate*) | [link](https://vulnhub.com/entry/prime-1,358/) | [`labs/3-056-prime-1/`](../labs/3-056-prime-1/README.md) |
+| **062** | symfonos: 1 | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/symfonos-1,322/) | [`labs/3-062-symfonos-1/`](../labs/3-062-symfonos-1/README.md) |
+| **059** | Raven: 1 | **3 — Easy** (stated: *Beginner / Intermediate*) | [link](https://vulnhub.com/entry/raven-1,256/) | [`labs/3-059-raven-1/`](../labs/3-059-raven-1/README.md) |
+| **081** | GoldenEye: 1 | **4 — Medium** (stated: *Intermediate*) | [link](https://vulnhub.com/entry/goldeneye-1,240/) | [`labs/4-081-goldeneye-1/`](../labs/4-081-goldeneye-1/README.md) |
+| **084** | Matrix: 1 | **4 — Medium** (stated: *Intermediate*) | [link](https://vulnhub.com/entry/matrix-1,259/) | [`labs/4-084-matrix-1/`](../labs/4-084-matrix-1/README.md) |
+| **069** | Web Developer: 1 | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/web-developer-1,288/) | [`labs/3-069-web-developer-1/`](../labs/3-069-web-developer-1/README.md) |
+| **058** | pyexp: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/pyexp-1,534/) | [`labs/3-058-pyexp-1/`](../labs/3-058-pyexp-1/README.md) |
+| **038** | Funbox: 1 | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/funbox-1,518/) | [`labs/3-038-funbox-1/`](../labs/3-038-funbox-1/README.md) |
+| **008** | Funbox: Scriptkiddie | **2 — Very Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/funbox-scriptkiddie,725/) | [`labs/2-008-funbox-scriptkiddie/`](../labs/2-008-funbox-scriptkiddie/README.md) |
+| **010** | NoobBox: 1 | **2 — Very Easy** (stated: *Beginner*) | [link](https://vulnhub.com/entry/noobbox-1,664/) | [`labs/2-010-noobbox-1/`](../labs/2-010-noobbox-1/README.md) |
+| **015** | BlueSky: 1 | **3 — Easy** (stated: *Beginner / Easy*) | [link](https://vulnhub.com/entry/bluesky-1,623/) | [`labs/3-015-bluesky-1/`](../labs/3-015-bluesky-1/README.md) |
+| **060** | serial: 1 | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/serial-1,349/) | [`labs/3-060-serial-1/`](../labs/3-060-serial-1/README.md) |
+| **078** | digitalworld.local: JOY | **4 — Medium** (stated: *Medium*) | [link](https://vulnhub.com/entry/digitalworldlocal-joy,298/) | [`labs/4-078-digitalworldlocal-joy/`](../labs/4-078-digitalworldlocal-joy/README.md) |
+| **024** | digitalworld.local: BRAVERY | **3 — Easy** (stated: *Easy / Medium*) | [link](https://vulnhub.com/entry/digitalworldlocal-bravery,281/) | [`labs/3-024-digitalworldlocal-bravery/`](../labs/3-024-digitalworldlocal-bravery/README.md) |
+| **043** | hackNos: Os-hackNos | **3 — Easy** (stated: *Easy*) | [link](https://vulnhub.com/entry/hacknos-os-hacknos,401/) | [`labs/3-043-hacknos-os-hacknos/`](../labs/3-043-hacknos-os-hacknos/README.md) |
 | **070** | **Basic Pentesting: 2** | **4 — Medium** (stated: *Easy–Intermediate*) | [link](https://vulnhub.com/entry/basic-pentesting-2,241/) | [`labs/4-070-basic-pentesting-2/`](../labs/4-070-basic-pentesting-2/README.md) |
 | **067** | **VulnOS: 2** | **3 — Easy** (stated: *Easy–Intermediate*) | [link](https://vulnhub.com/entry/vulnos-2,147/) | [`labs/3-067-vulnos-2/`](../labs/3-067-vulnos-2/README.md) |
 | **098** | **Lord Of The Root: 1.0.1** | **6 — Very Difficult** (stated: *Easy–Intermediate*) | [link](https://vulnhub.com/entry/lord-of-the-root-101,129/) | [`labs/6-098-lord-of-the-root-101/`](../labs/6-098-lord-of-the-root-101/README.md) |
@@ -111,10 +134,10 @@ protocol-level abuse, or an OS that is not Linux.
 |---:|---------|-----------|---------|-------------------|
 | **050** | **Kioptrix: 2014 (#5)** | **3 — Easy** (stated: *Beginner*) | **FreeBSD**, not Linux — every path assumption breaks; User-Agent access-control bypass; SYSRET kernel exploit | [read](../labs/3-050-kioptrix-2014-5/README.md) |
 | **097** | **Tr0ll: 2** | **5 — Difficult** (stated: *Beginner++ / Intermediate*) | Steganographic hints, Shellshock over an SSH forced command, and a **hand-written 32-bit buffer overflow** | [read](../labs/5-097-tr0ll-2/README.md) |
-| **063** | symfonos: 2 | **3 — Easy** (stated: *Easy / Medium*) | SMB + WordPress chaining | [stub](../labs/3-063-symfonos-2/README.md) |
-| **089** | symfonos: 3.1 | **4 — Medium** (stated: *Intermediate*) | Multi-service enumeration | [stub](../labs/4-089-symfonos-31/README.md) |
+| **063** | symfonos: 2 | **3 — Easy** (stated: *Easy / Medium*) | SMB + WordPress chaining | [read](../labs/3-063-symfonos-2/README.md) |
+| **089** | symfonos: 3.1 | **4 — Medium** (stated: *Intermediate*) | Multi-service enumeration | [read](../labs/4-089-symfonos-31/README.md) |
 | **026** | DriftingBlues: 1 | **3 — Easy** (stated: *Easy*) | Modern web + kernel privesc | [read](../labs/3-026-driftingblues-1/README.md) |
-| **044** | hackNos: Os-hackNos-2.1 | **3 — Easy** (stated: *Easy / Intermediate*) | Enumeration-heavy chain | [stub](../labs/3-044-hacknos-os-hacknos-21/README.md) |
+| **044** | hackNos: Os-hackNos-2.1 | **3 — Easy** (stated: *Easy / Intermediate*) | Enumeration-heavy chain | [read](../labs/3-044-hacknos-os-hacknos-21/README.md) |
 | **568** | serial: 2 | **8 — Unrated** (writeup pending) | Serialisation and chaining | [stub](../labs/8-568-serial-2/README.md) |
 | **257** | dpwwn: 1 | **8 — Unrated** (writeup pending) | WordPress + local privesc | [stub](../labs/8-257-dpwwn-1/README.md) |
 | **061** | Stapler: 1 | **3 — Easy** (stated: *Easy / Intermediate*) | Twenty-plus services, wide enumeration | [read](../labs/3-061-stapler-1/README.md) |

@@ -11,6 +11,9 @@
 | **Attacker** | Kali Linux (attacker `192.168.56.10`, target `192.168.56.101`) |
 | **Target OS** | Linux — Debian (Samba 4.5.16, Apache 2.4.25, WordPress 5.2.2) |
 
+> ?? **Learning Path 1 ? Machine 12 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/12-symfonos-1.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/12-symfonos-1.md)** ? Previous in path: [Machine 11 ? Photographer: 1](../3-055-photographer-1/README.md) ? Next in path: [Machine 13 ? HackInOS: 1](../3-040-hackinos-1/README.md)
+
 > **Note:** VMware and VirtualBox builds can vary slightly ("varies by build") —
 > banners, share contents and the exact WordPress plugin paths may differ. The
 > attack chain below is the intended one.
@@ -955,6 +958,20 @@ Congrats on rooting symfonos:1!
   - [WPScan](https://wpscan.com/)
   - [GTFOBins](https://gtfobins.github.io/) — abusing SUID/sudo binaries
   - [MITRE ATT&CK T1574.007 — PATH Interception](https://attack.mitre.org/techniques/T1574/007/)
+
+
+### Community notes — consensus, pitfalls and alternative routes (cross-checked against the sources below):
+
+- **Consensus chain:** `nmap -p-` → `22/25/80/139/445` → `/etc/hosts symfonos.local` → anonymous SMB `anonymous` → `attention.txt` password list → `enum4linux` → user `helios` → `smbclient //TARGET/helios -U 'helios%qwerty'` → `todo.txt` → WordPress at `/h3l105` → `wpscan --plugins-detection aggressive` → `mail-masta 1.0` LFI (EDB 40290) → SMTP log poisoning to `/var/mail/helios` → `?pl=/var/mail/helios&c=id` RCE → SUID `/opt/statuscheck` PATH hijack → root.
+- **Common pitfall:** the site misbehaves without the `symfonos.local` hostname in `/etc/hosts`; and the LFI only prints a file if it contains no `<?php` (so `/etc/passwd` works, PHP source does not).
+- **Common pitfall:** SMTP is spoken by hand — end the `DATA` body with a single `.` line and use `RCPT TO: helios@symfonos.localdomain`; some builds get RCE as `helios` rather than `www-data`.
+- **Common pitfall:** remember `-p-` and port 25; the path hijack needs `export PATH=/tmp:$PATH` (prepend) and `-p` in the payload, else you get `$` instead of `#`.
+- **Alternative route:** the second plugin `site-editor 1.1.1` is also an LFI (EDB 44340); `research.txt` is a rabbit hole — `todo.txt` holds the real `/h3l105` hint.
+- **Alternative routes (SBXIO, rudefish):** enumerate port 25 users with `smtp-user-enum -M VRFY` (returns `helios`); mail-masta's second LFI endpoint `inc/lists/csvexport.php?pl=`; if `/var/mail/helios` is empty try `/var/spool/mail/helios`; deliver the payload with `sendEmail … -o tls=no`; after the shell, `/var/www/html/h3l105/wp-config.php` holds `wordpress:password123`; gcc is present, so a compiled `setuid(0)` PATH payload is an option.
+- **⚠️ Verification note:** exact file wording varies by build. Our lab's `attention.txt` reads "A word to the wise… the following passwords are now BANNED", while crazyeights225's build shows a note signed **"-Zeus"** ("stop using passwords like 'epidioko', 'qwerty' and 'baseball'"). The three passwords are consistent across all sources — the signature is a bonus username, not a contradiction.
+- **⚠️ Verification note:** `todo.txt` wording also varies; some writeups show "Binge watch Dexter / Dance / Work on /h3l105". The only fact that matters — and it is consistent everywhere — is the path **`/h3l105`**.
+- **⚠️ Verification note:** the RCE user is `www-data` (UID 33) in our lab and in Hacking Articles' screenshots, but crazyeights225's build reports `helios` (UID 1000) for the same payload. Both are footholds; the SUID step is unchanged.
+- **Verified sources:** [crazyeights225](https://crazyeights225.github.io/symfonos1/) · [Hacking Articles](https://www.hackingarticles.in/symfonos1-vulnhub-walkthrough/) · [news4hackers](https://www.news4hackers.com/symfonos-1-vuln-hub-machine-walkthrough/) · [SBXIO](https://www.sbxio.com/vulnhub-symfonos-1)
 
 ---
 

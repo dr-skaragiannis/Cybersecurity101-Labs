@@ -32,7 +32,7 @@ A step-by-step, beginner-friendly walkthrough for the VulnHub machine **"Fowsnif
 
 ---
 
-## 0. Learning Objectives
+## 0. What you will learn
 
 By completing this lab, you'll learn:
 
@@ -596,7 +596,7 @@ cat /root/root.txt
 
 ---
 
-## 6. Summary
+## 6. Summary of vulnerabilities
 
 | Phase | Action | Result |
 |---|---|---|

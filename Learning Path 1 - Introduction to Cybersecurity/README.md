@@ -76,7 +76,7 @@ walks you across the whole of it.
 
 | # | Machine | Folder | Band | What it introduces | Est. |
 | --: | --- | --- | :-: | --- | :-: |
-| [1](Machines/01-basic-pentesting-1.md) | **Basic Pentesting: 1** | [`2-001`](../labs/2-001-basic-pentesting-1/README.md) | 2 | The whole lifecycle on one box: recon, content discovery, **anonymous FTP**, a **published service backdoor** (CVE-2010-4221), **WordPress default credentials**, and a world-writable `/etc/passwd` | 3–4 h |
+| [1](Machines/01-basic-pentesting-1.md) | **Basic Pentesting: 1** | [`2-001`](../labs/2-001-basic-pentesting-1/README.md) | 2 | The whole lifecycle on one box: recon, content discovery, **anonymous FTP**, a **published service backdoor** (EDB-15662 / CVE-2010-20103), **WordPress default credentials**, and a world-writable `/etc/passwd` | 3–4 h |
 | [2](Machines/02-cybersploit-1.md) | **CyberSploit: 1** | [`2-002`](../labs/2-002-cybersploit-1/README.md) | 2 | **Encoding vs encryption** (base64, binary), the `searchsploit` → Exploit-DB research workflow, and your first **kernel exploit** (overlayfs, Dirty COW) | 3–4 h |
 | [3](Machines/03-dc-1.md) | **DC: 1** | [`2-003`](../labs/2-003-dc-1/README.md) | 2 | Exploiting a **CMS CVE** (Drupalgeddon, CVE-2014-3704) with **Metasploit**, reading DB credentials out of a config file, and **SUID** privilege escalation | 3–5 h |
 | [4](Machines/04-dc-2.md) | **DC: 2** | [`2-004`](../labs/2-004-dc-2/README.md) | 2 | **Building a targeted wordlist** with `cewl`, WordPress user enumeration, **escaping a restricted shell (`rbash`)**, and `sudo` abuse via GTFOBins | 4–6 h |
@@ -181,6 +181,32 @@ you what matters for *this* path, the primer explains everything.
 | [`04-Credentials-and-Cracking.md`](04-Credentials-and-Cracking.md) | Machines 1, 2, 4, 7, 9, 11, 13 | Wordlists, hashing vs encoding, John/hashcat, reuse, spraying |
 | [`05-Linux-Privilege-Escalation.md`](05-Linux-Privilege-Escalation.md) | Machines 1, 3, 6, 7, 8, 9, 10, 11, 12, 13 | `sudo`, SUID, capabilities, cron, writable files, `/etc/passwd`, kernel, PATH hijacking |
 | [`06-Shells-Persistence-and-Escapes.md`](06-Shells-Persistence-and-Escapes.md) | Machines 1, 4, 6, 9, 10, 12, 13 | Reverse vs bind shells, TTY upgrades, `rbash` escapes, container escapes, cleanup and reporting |
+| [`07-Permissions-and-Access-Control.md`](07-Permissions-and-Access-Control.md) | Machines 1, 3, 6, 8, 9, 10, 11 | The DAC model in full (bits, `umask`, special bits, ACLs, `chattr`, capabilities) and **MAC** — SELinux and AppArmor |
+| [`08-Identity-Authentication-and-PAM.md`](08-Identity-Authentication-and-PAM.md) | Machines 1, 4, 7, 9, 10, 11, 12 | `/etc/passwd`·`shadow`·`group`, `su` vs `sudo`, the **PAM** stack, SSH key authentication |
+| [`09-Cryptography-GPG-and-Encryption.md`](09-Cryptography-GPG-and-Encryption.md) | Machine 2, and the extended track | Encoding vs hashing vs **encryption**; GPG **key issuance**, signing, symmetric files, `openssl enc`, LUKS |
+| [`10-Firewalls-and-Sandboxing.md`](10-Firewalls-and-Sandboxing.md) | Machines 5, 8, and the extended track | iptables/nftables/ufw, ingress vs **egress**, port knocking, and sandboxing (systemd, seccomp, MAC) |
+| [`11-Malware-Analysis-and-YARA.md`](11-Malware-Analysis-and-YARA.md) | Extended track / DFIR interest | Static vs dynamic analysis, `strings`/`binwalk`, IOCs, and writing **YARA** rules |
+
+### The extended track (modules 07–11)
+
+Modules 00–06 teach the *offensive* lifecycle on beginner boot2root machines. Modules
+**07–11** add the **systems and defensive** half of the discipline — permissions and
+MAC, identity and PAM, cryptography and key management, firewalls and sandboxing, and
+malware analysis. They stand alone as theory, and each is best *practised* on the
+band-3/4 machines below (already written up in [`labs/`](../labs/)):
+
+| Module | Practise on | Why that machine |
+| --- | --- | --- |
+| **07 — Permissions & MAC** | [`3-068-w1r3s-101`](../labs/3-068-w1r3s-101/README.md), [`3-031-fristileaks-13`](../labs/3-031-fristileaks-13/README.md), [`3-028-empire-breakout`](../labs/3-028-empire-breakout/README.md) | world-writable `/etc/shadow`; **SELinux** `httpd_t`; **file capabilities** |
+| **08 — Identity & PAM** | [`3-019-corrosion-1`](../labs/3-019-corrosion-1/README.md), [`3-059-raven-1`](../labs/3-059-raven-1/README.md), [`4-082-ha-narak`](../labs/4-082-ha-narak/README.md) | `su`/`sudo`/PAM-driven login behaviour; account and login-flow misconfiguration |
+| **09 — Crypto & GPG** | [`4-073-dc-7`](../labs/4-073-dc-7/README.md), [`3-056-prime-1`](../labs/3-056-prime-1/README.md) | GPG-encrypted backup + **passphrase leaked in cron mail**; `openssl enc` with a hardcoded key |
+| **10 — Firewalls & Sandboxing** | [`4-086-sickos-12`](../labs/4-086-sickos-12/README.md), [`6-098-lord-of-the-root-101`](../labs/6-098-lord-of-the-root-101/README.md) | **egress firewall** (only 443/8080 out); **port knocking** |
+| **11 — Malware Analysis & YARA** | [`5-097-tr0ll-2`](../labs/5-097-tr0ll-2/README.md), [`2-002-cybersploit-1`](../labs/2-002-cybersploit-1/README.md) | metadata forensics and `binwalk`; decoding obfuscated blobs |
+
+> **Why these are modules, not new machines.** The 13 path machines are chosen for a
+> clean beginner *offence* chain. The extended topics are best learned as a focused
+> read followed by practising on a machine that already exists — so the path stays
+> honest about what is beginner-rated while still covering the systems side.
 
 **Every module ends with an *Annotated command reference*, and every machine card ends
 with *The commands, annotated*.** Those sections walk through each command you will type
@@ -189,6 +215,29 @@ see, and a line-by-line reading of that output, plus what the usual failure mess
 Read the module for the *concepts*, then read its annotated reference while you are at the
 keyboard. If a command's output on your box differs from the one shown, the annotated
 section tells you whether the difference matters.
+
+### Recommended step-by-step study order (interleaving theory & labs)
+
+To get the maximum benefit without reading all twelve theory modules up front, follow this five-phase sequence that pairs each theory module immediately with the machines that practise it:
+
+| Phase | Step | Read (Theory) | Practise (Lesson Card → Full Walkthrough) | Core skill unlocked |
+| --- | --: | --- | --- | --- |
+| **Phase 0 — Lab & Terminal Setup** | 0 | [`docs/LAB-SETUP.md`](../docs/LAB-SETUP.md) · [`docs/TOOLS.md`](../docs/TOOLS.md) · [`00-Before-You-Start.md`](00-Before-You-Start.md) | — | Isolated host-only lab, snapshots, Linux CLI, pipes/redirection |
+| **Phase 1 — Recon, Enumeration & First Root (Band 2)** | 1 | [`01-Foundations-Networking-and-Recon.md`](01-Foundations-Networking-and-Recon.md) | [Card 01](Machines/01-basic-pentesting-1.md) → [`2-001-basic-pentesting-1`](../labs/2-001-basic-pentesting-1/README.md) | `nmap`, `/etc/hosts` VHOST, service backdoors, WP admin, writable `/etc/passwd` |
+| | 2 | [`04-Credentials-and-Cracking.md`](04-Credentials-and-Cracking.md) (§1–2) | [Card 02](Machines/02-cybersploit-1.md) → [`2-002-cybersploit-1`](../labs/2-002-cybersploit-1/README.md) | Encoding vs hashing vs encryption, `searchsploit`, kernel exploit workflow |
+| | 3 | [`02-Web-Attacks.md`](02-Web-Attacks.md) (§7) · [`05-Linux-Privilege-Escalation.md`](05-Linux-Privilege-Escalation.md) (§2) | [Card 03](Machines/03-dc-1.md) → [`2-003-dc-1`](../labs/2-003-dc-1/README.md) | CMS CVE (Drupalgeddon), config-file DB secrets, SUID `find -p` |
+| | 4 | [`04-Credentials-and-Cracking.md`](04-Credentials-and-Cracking.md) (§3–5) · [`06-Shells-Persistence-and-Escapes.md`](06-Shells-Persistence-and-Escapes.md) (§3) | [Card 04](Machines/04-dc-2.md) → [`2-004-dc-2`](../labs/2-004-dc-2/README.md) | Targeted wordlists (`cewl`), `wpscan`, `rbash` escape, `sudo` GTFOBins |
+| **Phase 2 — Service, Web & Capability Chains (Band 3 early)** | 5 | [`03-Service-and-Network-Attacks.md`](03-Service-and-Network-Attacks.md) | [Card 05](Machines/05-kioptrix-level-1-1.md) → [`3-046-kioptrix-level-1-1`](../labs/3-046-kioptrix-level-1-1/README.md) | SMB/Samba fingerprinting, `trans2open`, legacy C exploit compilation |
+| | 6 | [`02-Web-Attacks.md`](02-Web-Attacks.md) (§1–2, §5) · [`06-Shells-Persistence-and-Escapes.md`](06-Shells-Persistence-and-Escapes.md) (§1–2) | [Card 06](Machines/06-bossplayersctf-1.md) → [`3-016-bossplayersctf-1`](../labs/3-016-bossplayersctf-1/README.md) | Multi-layer base64, OS command injection, reverse shells & TTY upgrade |
+| | 7 | [`02-Web-Attacks.md`](02-Web-Attacks.md) (§2, §7) · [`04-Credentials-and-Cracking.md`](04-Credentials-and-Cracking.md) (§4) | [Card 07](Machines/07-mr-robot-1.md) → [`3-053-mr-robot-1`](../labs/3-053-mr-robot-1/README.md) | Wordlist hygiene (`sort -u`), WP Theme Editor RCE, raw-MD5 cracking, SUID `nmap` |
+| | 8 | [`03-Service-and-Network-Attacks.md`](03-Service-and-Network-Attacks.md) (§2) · [`05-Linux-Privilege-Escalation.md`](05-Linux-Privilege-Escalation.md) (§3) | [Card 08](Machines/08-empire-breakout.md) → [`3-028-empire-breakout`](../labs/3-028-empire-breakout/README.md) | SMB RID cycling (`enum4linux`), Usermin vs Webmin, Linux capabilities (`getcap`) |
+| **Phase 3 — SQLi, LFI, Upload Bypasses, Cron/PATH & Containers (Band 3 late)** | 9 | [`02-Web-Attacks.md`](02-Web-Attacks.md) (§3, §6) · [`05-Linux-Privilege-Escalation.md`](05-Linux-Privilege-Escalation.md) (§4–5) | [Card 09](Machines/09-cengbox-1.md) → [`3-018-cengbox-1`](../labs/3-018-cengbox-1/README.md) | `sqlmap` login bypass & DB dump, `.ceng` upload bypass, `pspy` cron hunting |
+| | 10 | [`02-Web-Attacks.md`](02-Web-Attacks.md) (§4, §6) · [`05-Linux-Privilege-Escalation.md`](05-Linux-Privilege-Escalation.md) (§7) | [Card 10](Machines/10-pwnlab-init.md) → [`3-057-pwnlab-init`](../labs/3-057-pwnlab-init/README.md) | `php://filter` LFI source leak, GIF magic-byte polyglot, `PATH` hijacking |
+| | 11 | [`03-Service-and-Network-Attacks.md`](03-Service-and-Network-Attacks.md) (§2) · [`02-Web-Attacks.md`](02-Web-Attacks.md) (§6) | [Card 11](Machines/11-photographer-1.md) → [`3-055-photographer-1`](../labs/3-055-photographer-1/README.md) | Anonymous SMB mail leak, Koken upload bypass (EDB-48706), SUID `php7.2 -p` |
+| | 12 | [`03-Service-and-Network-Attacks.md`](03-Service-and-Network-Attacks.md) (§3) · [`02-Web-Attacks.md`](02-Web-Attacks.md) (§4) | [Card 12](Machines/12-symfonos-1.md) → [`3-062-symfonos-1`](../labs/3-062-symfonos-1/README.md) | WP plugin LFI (`mail-masta`), SMTP log poisoning → RCE, SUID `PATH` hijack |
+| | 13 | [`06-Shells-Persistence-and-Escapes.md`](06-Shells-Persistence-and-Escapes.md) (§5–7) · [`05-Linux-Privilege-Escalation.md`](05-Linux-Privilege-Escalation.md) (§8) | [Card 13](Machines/13-hackinos-1.md) → [`3-040-hackinos-1`](../labs/3-040-hackinos-1/README.md) | Source-assisted upload bypass, internal Docker DB pivot, `docker` group host escape |
+| **Phase 4 — Extended Systems & Defensive Track** | 14–18 | [`07`](07-Permissions-and-Access-Control.md) → [`08`](08-Identity-Authentication-and-PAM.md) → [`09`](09-Cryptography-GPG-and-Encryption.md) → [`10`](10-Firewalls-and-Sandboxing.md) → [`11`](11-Malware-Analysis-and-YARA.md) | Paired Band 3/4 labs (`3-068-w1r3s-101`, `3-031-fristileaks-13`, `3-019-corrosion-1`, `4-073-dc-7`, `4-086-sickos-12`, `5-097-tr0ll-2`) | DAC/MAC (SELinux & AppArmor), PAM, GPG & crypto, firewalls/egress/sandboxing, YARA |
+| **Phase 5 — Bridge Labs to Intermediate** | 19+ | [`docs/CONCEPTS.md`](../docs/CONCEPTS.md) (§13, §16–18) | `3-039-ha-wordy` → `3-064-symfonos-52` → `3-020-darkhole-1` → `3-063-symfonos-2` → `3-060-serial-1` → `4-070-basic-pentesting-2` → `4-075-dc-9` | CSRF/RFI, LDAPi, IDOR, SSH port forwarding, deserialisation, Band 4 chains |
 
 
 ---
@@ -237,6 +286,20 @@ for why each one matters.
 
 ---
 
+## You have completed Learning Path 1 when…
+
+1. You have written **13 one-page reports** (one per machine, including the root cause and the blue-team fix for every vulnerability).
+2. You can explain **what every flag does** in `nmap`, `sqlmap`, `john`, `hashcat`, `hydra`, `wpscan`, `ffuf`, `smbclient`, `getcap`, and `find -perm`.
+3. You can read `id` output and immediately state whether you hold root via `uid=0` or `euid=0` — and why a shell without `-p` drops `euid=0`.
+4. You know the **privilege-escalation checklist** in order from memory: `sudo -l` → SUID → capabilities → cron/`pspy` → writable files → privileged groups (`docker`/`lxd`) → kernel.
+5. You have re-solved at least **two machines from a clean snapshot without opening the walkthrough**.
+
+---
+
+> 🩺 **On Windows?** Antivirus software may flag educational reverse-shell snippets inside Markdown files as false positives. See [Module 00, §9.11](00-Before-You-Start.md), [`docs/LAB-SETUP.md` §10](../docs/LAB-SETUP.md#10-windows--antivirus--keep-your-lab-files-from-being-deleted), and the [Repository Audit (`docs/AUDIT.md`)](../docs/AUDIT.md).
+
+---
+
 _Part of the [Cybersecurity101-Labs](../README.md) collection ·
-[catalog](../docs/CATALOG.md) · [concepts primer](../docs/CONCEPTS.md) ·
-[all walkthroughs by difficulty](../docs/PROGRESS.md)._
+[reading order](../docs/INDEX.md) · [Greek edition (`Μαθησιακή Διαδρομή 1`)](../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md) · [catalog](../docs/CATALOG.md) ·
+[concepts primer](../docs/CONCEPTS.md) · [all walkthroughs by difficulty](../docs/PROGRESS.md)._

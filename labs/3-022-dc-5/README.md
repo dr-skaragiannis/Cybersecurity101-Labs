@@ -100,6 +100,10 @@ Nmap scan report for 192.168.56.101
 Host is up (0.00042s latency).
 ```
 
+> **How to read it:** `Host is up` means the address answered the probe; that single line is the
+> whole result of a discovery scan. Note the target IP, then run a **service** scan
+> (`nmap -p- -sV`) — discovery only tells you *that* the host exists, not what it runs.
+
 The target is `192.168.56.101`.
 
 ![Ping sweep finding the target host](images/01-nmap-sweep.png)

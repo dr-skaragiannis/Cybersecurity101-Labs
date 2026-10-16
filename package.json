@@ -1,0 +1,13 @@
+{
+  "name": "cybersecurity101-labs-page",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Static HTML site build of the Cybersecurity101 lab guides.",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "marked": "^18.1.1"
+  }
+}
